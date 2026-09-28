@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>地中海の空</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%231d4f7a%27/%3E%3Ccircle cx=%2721%27 cy=%2712%27 r=%275%27 fill=%27%23f6d58a%27/%3E%3Cpath d=%27M4 22c4-2 8 2 12 0s8-2 12 0v6H4z%27 fill=%27%2378c3d6%27/%3E%3C/svg%3E"
+    />
+    <meta name="description" content="地中海の群島の上を、ただ静かに飛び続ける。" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0b1624;
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+        color: #f4efe4;
+        cursor: default;
+        user-select: none;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        touch-action: none;
+      }
+      .ui {
+        position: fixed;
+        left: 22px;
+        bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        opacity: 0;
+        transform: translateY(6px);
+        transition:
+          opacity 1.2s ease,
+          transform 1.2s ease;
+        pointer-events: none;
+      }
+      .ui.visible {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+      }
+      .ui-group {
+        display: flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 999px;
+        background: rgba(10, 20, 30, 0.28);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      .ui button {
+        font: inherit;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        color: rgba(255, 250, 240, 0.72);
+        background: transparent;
+        border: 0;
+        padding: 5px 12px;
+        border-radius: 999px;
+        cursor: pointer;
+        transition:
+          background 0.4s,
+          color 0.4s;
+      }
+      .ui button:hover {
+        color: #fff;
+      }
+      .ui button.active {
+        background: rgba(255, 250, 240, 0.16);
+        color: #fff;
+      }
+      .ui .ui-fs {
+        display: grid;
+        place-items: center;
+        padding: 7px;
+        background: rgba(10, 20, 30, 0.28);
+        backdrop-filter: blur(8px);
+      }
+      .ui-clock {
+        font-size: 12px;
+        letter-spacing: 0.15em;
+        color: rgba(255, 250, 240, 0.6);
+        font-variant-numeric: tabular-nums;
+      }
+      .veil {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: #0b1624;
+        transition: opacity 2.4s ease;
+        pointer-events: none;
+      }
+      .veil span {
+        font-size: 15px;
+        letter-spacing: 0.5em;
+        color: rgba(244, 239, 228, 0.55);
+      }
+      .veil.gone {
+        opacity: 0;
+      }
+      .nogl {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        text-align: center;
+        line-height: 1.8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="veil" id="veil"><span>地中海の空</span></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
