@@ -3,7 +3,7 @@ import { G, globalsFor } from "../render/globals";
 import { GLOBALS_GLSL } from "../render/shaders/common";
 import type { IslandManager } from "./islands/manager";
 
-const MAX_BIRDS = 220;
+const MAX_BIRDS = 420;
 
 type Mode = "colony" | "cross" | "glide" | "skim";
 
@@ -151,7 +151,7 @@ export class Birds {
   private anim: THREE.InstancedBufferAttribute;
   private flocks: Flock[] = [];
   private freeSlots: number[] = [];
-  private nextCrossing = 25;
+  private nextCrossing = 8;
   private nextGlider = 15;
 
   constructor(private islands: IslandManager) {
@@ -305,7 +305,7 @@ export class Birds {
     // ---- a flock crossing ahead of the plane: a small, memorable event ----
     this.nextCrossing -= dt;
     if (this.nextCrossing <= 0 && this.freeSlots.length > 20) {
-      this.nextCrossing = 35 + Math.random() * 55;
+      this.nextCrossing = 12 + Math.random() * 18;
       const side = Math.random() < 0.5 ? -1 : 1;
       const right = new THREE.Vector3(-planeFwd.z, 0, planeFwd.x).normalize();
       const birdSpeed = 12 + Math.random() * 4;
@@ -327,7 +327,10 @@ export class Birds {
         low ? "skim" : "cross",
         c,
         vel,
-        9 + Math.floor(Math.random() * 12),
+        // now and then a big flock
+        Math.random() < 0.2
+          ? 24 + Math.floor(Math.random() * 16)
+          : 9 + Math.floor(Math.random() * 12),
         0,
         tCross * 2.4 + 20,
       );
