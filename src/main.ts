@@ -82,6 +82,7 @@ function start() {
           "uSkyLUT",
         ),
         uMoonDir: G.uMoonDir,
+        uCirrus: G.uCirrus,
         uSunDisk: { value: new THREE.Color() },
         uMoonColor: { value: new THREE.Color() },
       },
@@ -234,11 +235,15 @@ function start() {
     G.uWind.value.set(Math.cos(windA) * windS, Math.sin(windA) * windS);
     G.uCloudOffset.value.addScaledVector(G.uWind.value, dt * 1.6);
     G.uCloudCover.value =
-      0.47 +
+      0.44 +
       Math.sin(elapsed * 0.0023 + 2) * 0.09 +
       Math.sin(elapsed * 0.0071) * 0.05 -
       G.uDeck.value * 0.12;
 
+    // high cirrus comes and goes over tens of minutes
+    G.uCirrus.value =
+      THREE.MathUtils.clamp(0.45 + 0.45 * Math.sin(elapsed * 0.0017 + 0.4), 0, 1) *
+      (1 - G.uDeck.value);
     const skyUniforms = (sky.material as THREE.ShaderMaterial).uniforms;
     (skyUniforms.uSunDisk.value as THREE.Color).copy(lighting.sunColor).multiplyScalar(1 / 22);
     (skyUniforms.uMoonColor.value as THREE.Color)

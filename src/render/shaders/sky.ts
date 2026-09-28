@@ -105,7 +105,23 @@ ${GLOBALS_GLSL}
 uniform vec3 uMoonDir;
 uniform vec3 uSunDisk;
 uniform vec3 uMoonColor;
+uniform float uCirrus;
 varying vec3 vDir;
+
+// thin cirrus streaks high above everything, combed out along the wind
+float cirrus(vec3 d) {
+  if (d.y < 0.015 || uCirrus <= 0.0) return 0.0;
+  float t = (9000.0 - cameraPosition.y) / d.y;
+  vec2 p = cameraPosition.xz + d.xz * min(t, 160000.0) + uCloudOffset * 2.5;
+  vec2 wd = normalize(uWind + vec2(1e-3, 0.0));
+  vec2 q = vec2(dot(p, wd), dot(p, vec2(-wd.y, wd.x)));
+  float warp = fbmValue(q * vec2(0.00004, 0.00009) + 3.0);
+  float streak = fbmValue(vec2(q.x * 0.00004, q.y * 0.00016 + warp * 2.2));
+  float patches = fbmValue(q * 0.000018 + 11.0);
+  float c = smoothstep(0.45, 0.85, streak) * smoothstep(0.35, 0.7, patches);
+  // fade toward the horizon where the layer gets too thin to resolve
+  return c * smoothstep(0.015, 0.14, d.y) * uCirrus;
+}
 
 float starField(vec3 d) {
   // stars on a cube-ish grid in direction space
@@ -159,6 +175,13 @@ void main() {
     col += uMoonColor * moonDisk * shade * 5.0;
   }
   col += uMoonColor * pow(max(cm, 0.0), 1200.0) * 0.3 + uMoonColor * pow(max(cm, 0.0), 40.0) * 0.012;
+
+  float ci = cirrus(d);
+  if (ci > 0.0) {
+    float mu = dot(d, uSunDir);
+    vec3 lit = uSunColor * (0.02 + 0.05 * pow(max(mu, 0.0), 6.0)) + uAmbZenith * 0.9;
+    col = mix(col, lit, ci * 0.5);
+  }
 
   // stars fade in as the sky darkens and near the horizon haze
   float starVis = uNight * smoothstep(0.0, 0.25, d.y);

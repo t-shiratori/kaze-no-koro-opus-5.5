@@ -135,7 +135,7 @@ vec4 cloudWeather(vec2 xz) {
 
 // local cloud top above the base for a given coverage: fat towers where coverage peaks
 float cloudTop(vec4 w) {
-  return 60.0 + 2600.0 * (0.4 + 0.6 * w.y) * pow(min(w.x, 0.6), 0.65);
+  return 120.0 + 1250.0 * (0.5 + 0.5 * w.y) * sqrt(min(w.x, 0.6));
 }
 
 // A broken stratocumulus deck whose gaps let sunbeams through (light-shaft mood).
@@ -143,50 +143,67 @@ const float DECK_BASE = 900.0;
 float deckShape(vec3 p) {
   if (uDeck <= 0.001 || p.y < DECK_BASE - 80.0 || p.y > DECK_BASE + 900.0) return 0.0;
   vec2 q = p.xz + uCloudOffset * 0.9;
-  float c1 = textureLod(uWeather, q / 9800.0 + vec2(0.13, 0.61), 0.0).r;
-  float c2 = textureLod(uWeather, q / 3600.0 + vec2(0.57, 0.19), 0.0).r;
+  // smooth, continuous noise (not the cellular cumulus map): a sheet with holes
+  float c1 = textureLod(uWeather, q / 4200.0 + vec2(0.13, 0.61), 0.0).g;
+  float c2 = textureLod(uWeather, q / 1900.0 + vec2(0.57, 0.19), 0.0).b;
   float cov = c1 * 0.8 + c2 * 0.2;
-  float c = cov - mix(1.05, 0.24, uDeck);
+  float c = cov - mix(1.05, 0.45, uDeck);
   if (c <= 0.0) return 0.0;
   // gently undulating base, thicker where the deck is solid
-  float bv = textureLod(uWeather, q / 5200.0 + vec2(0.31, 0.83), 0.0).r;
+  float bv = textureLod(uWeather, q / 5200.0 + vec2(0.31, 0.83), 0.0).g;
   float base = DECK_BASE + (bv - 0.5) * 90.0 - min(c, 0.3) * 60.0;
   float top = base + 60.0 + 900.0 * sqrt(min(c, 0.5));
   float hn = (p.y - base) / (top - base);
   if (hn < 0.0 || hn > 1.0) return 0.0;
   float body = smoothstep(0.0, 0.1, hn) * (1.0 - smoothstep(0.5, 1.0, hn));
-  return smoothstep(0.0, 0.22, c) * body;
+  return smoothstep(0.0, 0.1, c) * body;
 }
 
 float cloudDensity(vec3 p, vec4 w, bool detail) {
   float dens = 0.0;
+  float hn = 0.0; // height within the cloud, 0 at the base
   float y = p.y - w.w;
   if (w.x > 0.0 && y > 0.0) {
     float top = cloudTop(w);
-    float hn = y / top;
+    hn = y / top;
     if (hn < 1.0) {
-      // rounded dome profile: flat base, bulging body, domed crown
-      float body = smoothstep(0.0, 0.07, hn) * (1.0 - smoothstep(0.55, 1.0, hn));
-      float cov = smoothstep(0.0, 0.14, w.x);
-      dens = cov * body - (1.0 - body) * 0.05;
+      // fair-weather cumulus: a flat base under a rounded, dome-like crown (not a peak)
+      float body = smoothstep(0.0, 0.1, hn) * sqrt(clamp(1.0 - hn * hn, 0.0, 1.0));
+      // density falls off gradually toward the rim so the billows can sculpt the sides
+      float cov = smoothstep(0.0, 0.3, w.x);
+      dens = cov * body;
     }
   }
-  dens = max(dens, deckShape(p));
+  float deck = deckShape(p);
+  if (deck > dens) {
+    dens = deck;
+    hn = 0.3;
+  }
   if (dens <= 0.0) return 0.0;
   vec3 q = vec3(p.x + uCloudOffset.x, p.y - uTime * 1.3, p.z + uCloudOffset.y);
-  vec4 n = textureLod(uNoise3D, q / 1500.0, 0.0);
-  float baseN = clamp(((n.r * 0.55 + n.g * 0.3 + n.b * 0.15) - 0.5) / 0.26, 0.0, 1.0);
-  dens = remap(dens, (1.0 - baseN) * 0.66, 1.0, 0.0, 1.0);
+  // big rounded billows (inverted Worley cells of ~180-350 m) carve the cauliflower silhouette;
+  // they bite hardest into the crown and hardly at all into the flat base
+  vec4 n = textureLod(uNoise3D, q / vec3(1750.0, 1150.0, 1750.0), 0.0);
+  float rn = clamp((n.r - 0.6) / 0.27, 0.0, 1.0);
+  float gn = clamp((n.g - 0.24) / 0.48, 0.0, 1.0);
+  // Worley cells are cones with sharp creases; bend them into soft round bumps
+  rn = 1.0 - (1.0 - rn) * (1.0 - rn);
+  gn = 1.0 - (1.0 - gn) * (1.0 - gn);
+  float billow = rn * 0.5 + gn * 0.5;
+  float bite = mix(0.15, 0.7, smoothstep(0.02, 0.5, hn));
+  dens = remap(dens, (1.0 - billow) * bite, 1.0, 0.0, 1.0);
   if (detail && dens > 0.0) {
-    // two octaves of billows; the finer one is bent by the coarser so edges curl
-    vec4 d = textureLod(uNoise3D, q / 300.0 + vec3(0.0, uTime * 0.002, 0.0), 0.0);
-    vec4 d2 = textureLod(uNoise3D, q / 95.0 + d.gba * 0.35, 0.0);
-    float dn = clamp(((d.g * 0.55 + d.b * 0.3 + d.a * 0.15) - 0.3) / 0.37, 0.0, 1.0);
+    // smaller puffs on the puffs, gently curled by the larger ones
+    vec4 d = textureLod(uNoise3D, q / vec3(460.0, 300.0, 460.0) + vec3(0.0, uTime * 0.002, 0.0), 0.0);
+    vec4 d2 = textureLod(uNoise3D, q / 110.0 + d.gba * 0.25, 0.0);
+    float dn = clamp(((d.g * 0.6 + d.b * 0.3 + d.a * 0.1) - 0.3) / 0.37, 0.0, 1.0);
     float dn2 = clamp((d2.g - 0.25) / 0.45, 0.0, 1.0);
-    dn = mix(dn, dn2, 0.35);
-    dens = remap(dens, dn * 0.42, 1.0, 0.0, 1.0);
+    dn = 1.0 - (1.0 - dn) * (1.0 - dn);
+    dn2 = 1.0 - (1.0 - dn2) * (1.0 - dn2);
+    dn = mix(dn, dn2, 0.25);
+    dens = remap(dens, (1.0 - dn) * mix(0.1, 0.38, smoothstep(0.0, 0.4, hn)), 1.0, 0.0, 1.0);
   }
-  // crisper, more solid bodies with a thin soft rim
+  // soft cotton rather than solid rock: a wider, translucent rim
   return clamp(dens * 2.2, 0.0, 1.0);
 }
 `;

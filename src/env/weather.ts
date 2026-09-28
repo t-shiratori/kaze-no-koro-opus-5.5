@@ -107,11 +107,11 @@ export class Weather {
     let d = 0;
     const yy = y - w[3];
     if (yy > 0 && w[0] > 0) {
-      const top = 60 + 2600 * (0.4 + 0.6 * w[1]) * Math.pow(Math.min(w[0], 0.6), 0.65);
+      const top = 120 + 1250 * (0.5 + 0.5 * w[1]) * Math.sqrt(Math.min(w[0], 0.6));
       const hn = yy / top;
       if (hn < 1) {
-        const body = smoothstep(0, 0.07, hn) * (1 - smoothstep(0.55, 1, hn));
-        d = smoothstep(0, 0.14, w[0]) * body;
+        const body = smoothstep(0, 0.1, hn) * Math.sqrt(clamp(1 - hn * hn, 0, 1));
+        d = smoothstep(0, 0.3, w[0]) * body;
       }
     }
     d = Math.max(d, this.deckAt(x, y, z));
@@ -124,15 +124,15 @@ export class Weather {
     if (deck <= 0.001 || y < 820 || y > 1800) return 0;
     const qx = x + G.uCloudOffset.value.x * 0.9;
     const qz = z + G.uCloudOffset.value.y * 0.9;
-    const c1 = this.sample(qx / 9800 + 0.13, qz / 9800 + 0.61, 0);
-    const c2 = this.sample(qx / 3600 + 0.57, qz / 3600 + 0.19, 0);
-    const c = c1 * 0.8 + c2 * 0.2 - (1.05 + (0.24 - 1.05) * deck);
+    const c1 = this.sample(qx / 4200 + 0.13, qz / 4200 + 0.61, 1);
+    const c2 = this.sample(qx / 1900 + 0.57, qz / 1900 + 0.19, 2);
+    const c = c1 * 0.8 + c2 * 0.2 - (1.05 + (0.45 - 1.05) * deck);
     if (c <= 0) return 0;
-    const bv = this.sample(qx / 5200 + 0.31, qz / 5200 + 0.83, 0);
+    const bv = this.sample(qx / 5200 + 0.31, qz / 5200 + 0.83, 1);
     const base = 900 + (bv - 0.5) * 90 - Math.min(c, 0.3) * 60;
     const top = base + 60 + 900 * Math.sqrt(Math.min(c, 0.5));
     const hn = (y - base) / (top - base);
     if (hn < 0 || hn > 1) return 0;
-    return smoothstep(0, 0.22, c) * smoothstep(0, 0.1, hn) * (1 - smoothstep(0.5, 1, hn));
+    return smoothstep(0, 0.1, c) * smoothstep(0, 0.1, hn) * (1 - smoothstep(0.5, 1, hn));
   }
 }

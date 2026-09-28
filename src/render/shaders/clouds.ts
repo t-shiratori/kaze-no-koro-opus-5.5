@@ -106,7 +106,8 @@ void main() {
 
   vec3 sunC = uSunColor;
   vec3 ambTop = uAmbZenith * 1.25 + uAmbHorizon * 0.2;
-  vec3 ambBottom = uAmbHorizon * 0.32 + vec3(0.02, 0.06, 0.09) * length(uSunColor) * max(uSunDir.y, 0.0) * 0.14;
+  // flat bases: neutral grey, lifted a little by light bouncing off the sea
+  vec3 ambBottom = uAmbHorizon * 0.55 + vec3(0.03, 0.05, 0.07) * length(uSunColor) * max(uSunDir.y, 0.0) * 0.14;
   // beams: strongly forward scattering haze
   float shaftPhase = mix(phaseHG(mu, 0.78), phaseHG(mu, 0.25), 0.45) * 4.0 * 3.14159;
 
@@ -188,19 +189,19 @@ void main() {
       float dens = cloudDensity(p, w, t < 9000.0);
       if (dens > 0.003) {
         float sigma = 0.03 * dens;
-        float od = lightMarch(p, L, fract(jitter + float(i) * 0.618)) * 0.038;
+        float od = lightMarch(p, L, fract(jitter + float(i) * 0.618)) * 0.026;
         // multi-octave scattering approximation: deep shade inside, light still bleeds through
         float beer = exp(-od) + 0.35 * exp(-od * 0.25) + 0.12 * exp(-od * 0.07);
         // powder: with the sun behind the viewer, the crevices between billows darken
         float powder = clamp((1.0 - exp(-od * 1.8 - 0.1)) * 1.7, 0.0, 1.2);
-        float pf = mix(1.0, powder, 0.5 - 0.5 * mu);
+        float pf = mix(1.0, powder, (0.5 - 0.5 * mu) * 0.6);
         float hFrac = p.y < w.w ? clamp((p.y - DECK_BASE) / 500.0, 0.0, 1.0) : clamp((p.y - w.w) / cloudTop(w), 0.0, 1.0);
         vec3 amb = mix(ambBottom, ambTop, pow(hFrac, 0.7)) * (0.5 + 0.5 * (1.0 - dens));
         // a heavy deck is dark underneath: little skylight reaches its base
         amb *= 1.0 - uDeck * 0.45 * (1.0 - hFrac);
         // light that has diffused deep into the cloud: keeps interiors luminous white-grey
-        vec3 diffuse = sunC * max(L.y, 0.12) * 0.022 * exp(-od * 0.02);
-        vec3 S = (sunC * beer * phase * pf * 0.085 + amb * 0.75 + diffuse) * sigma;
+        vec3 diffuse = sunC * max(L.y, 0.12) * 0.03 * exp(-od * 0.02);
+        vec3 S = (sunC * beer * phase * pf * 0.1 + amb * 0.7 + diffuse) * sigma;
         float Ts = exp(-sigma * step);
         vec3 Sint = (S - S * Ts) / sigma;
         scat += T * Sint;

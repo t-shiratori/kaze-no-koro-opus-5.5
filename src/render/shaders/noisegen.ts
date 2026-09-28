@@ -74,6 +74,8 @@ void main() {
 
 export const WEATHER_FRAG = /* glsl */ `
 precision highp float;
+const float COV_LO = 0.08;
+const float COV_HI = 0.75;
 in vec2 vUv;
 out vec4 outColor;
 ${TILE_NOISE}
@@ -89,12 +91,14 @@ float perlinFbm2(vec2 p, float freq, int oct) {
 float worley2(vec2 p, float freq) { return worley3(vec3(p * freq, 0.37), freq); }
 void main() {
   vec2 p = vUv;
-  // R: cumulus coverage - irregular clusters of lumpy cells of many sizes
-  float cells = pow(clamp(1.0 - worley2(p, 13.0), 0.0, 1.0), 1.3);
-  float small = pow(clamp(1.0 - worley2(p + 0.21, 29.0), 0.0, 1.0), 1.5);
-  float fb = perlinFbm2(p, 5.0, 5) * 0.5 + 0.5;
-  float cluster = smoothstep(0.3, 0.75, perlinFbm2(p + 0.47, 3.0, 3) * 0.5 + 0.5);
-  float cov = clamp((fb * 0.62 + cells * 0.3 * (0.5 + cluster) + small * 0.14 - 0.08 - 0.28) / 0.34, 0.0, 1.0);
+  // R: cumulus coverage - separate rounded cells (individual clouds) of a few sizes,
+  //    loosely gathered into fields and streets by a smooth noise
+  float big = pow(clamp(1.0 - worley2(p, 8.0), 0.0, 1.0), 1.6);
+  float mid = pow(clamp(1.0 - worley2(p + 0.21, 15.0), 0.0, 1.0), 1.8);
+  float fb = perlinFbm2(p, 5.0, 4) * 0.5 + 0.5;
+  float cluster = smoothstep(0.25, 0.75, perlinFbm2(p + 0.47, 3.0, 3) * 0.5 + 0.5);
+  float raw = max(big * (0.75 + 0.25 * fb), mid * 0.85 * (0.6 + 0.4 * cluster)) + (fb - 0.5) * 0.18;
+  float cov = clamp((raw - COV_LO) / (COV_HI - COV_LO), 0.0, 1.0);
   // G: regional cloudiness, B: rain likelihood, A: fine puffs / gusts
   float region = clamp(perlinFbm2(p + 0.31, 3.0, 4) * 0.9 + 0.5, 0.0, 1.0);
   float rain = clamp(perlinFbm2(p + 0.77, 4.0, 3) * 1.1 + 0.5, 0.0, 1.0);

@@ -17,6 +17,7 @@ export const G = {
   uCloudOffset: { value: new THREE.Vector2(0, 0) },
   uCloudCover: { value: 0.5 },
   uDeck: { value: 0 },
+  uCirrus: { value: 0.5 },
   uShaftHaze: { value: 0.00004 },
   uCloudShadow: { value: null as THREE.Texture | null },
   uCloudShadowFrame: { value: new THREE.Vector3(0, 0, 24000) },
