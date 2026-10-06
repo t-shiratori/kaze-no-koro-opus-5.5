@@ -112,7 +112,7 @@ uniform sampler2D uWeather;
 uniform highp sampler3D uNoise3D;
 uniform float uCloudCover;   // global cloudiness bias [0,1]
 uniform float uDeck;         // strength of the broken stratocumulus deck [0,1]
-const float CLOUD_BOTTOM = 620.0;
+const float CLOUD_BOTTOM = 560.0;
 const float CLOUD_TOP = 4600.0;
 
 float remap(float v, float a, float b, float c, float d) { return c + (v - a) / (b - a) * (d - c); }
@@ -140,8 +140,9 @@ float cloudTop(vec4 w) {
 
 // A broken stratocumulus deck whose gaps let sunbeams through (light-shaft mood).
 const float DECK_BASE = 900.0;
-float deckShape(vec3 p) {
-  if (uDeck <= 0.001 || p.y < DECK_BASE - 80.0 || p.y > DECK_BASE + 900.0) return 0.0;
+float deckShape(vec3 p, out float hnOut) {
+  hnOut = 0.0;
+  if (uDeck <= 0.001 || p.y < DECK_BASE - 200.0 || p.y > DECK_BASE + 900.0) return 0.0;
   vec2 q = p.xz + uCloudOffset * 0.9;
   // smooth, continuous noise (not the cellular cumulus map): a sheet with holes
   float c1 = textureLod(uWeather, q / 4200.0 + vec2(0.13, 0.61), 0.0).g;
@@ -149,13 +150,23 @@ float deckShape(vec3 p) {
   float cov = c1 * 0.8 + c2 * 0.2;
   float c = cov - mix(1.05, 0.45, uDeck);
   if (c <= 0.0) return 0.0;
-  // gently undulating base, thicker where the deck is solid
+  // a lumpy, rolling underside: broad swells, rolls stretched along the wind and
+  // rounded pouches hanging down where the deck is thickest
   float bv = textureLod(uWeather, q / 5200.0 + vec2(0.31, 0.83), 0.0).g;
-  float base = DECK_BASE + (bv - 0.5) * 90.0 - min(c, 0.3) * 60.0;
-  float top = base + 60.0 + 900.0 * sqrt(min(c, 0.5));
+  vec2 wd = normalize(uWind + vec2(1e-3, 0.0));
+  vec2 qr = vec2(dot(q, wd), dot(q, vec2(-wd.y, wd.x)));
+  // (only smooth, crease-free noise may shape the base: any sharp feature in this 2D map
+  //  becomes a vertical wall or a hanging spike in the cloud)
+  float rolls = textureLod(uWeather, qr / vec2(3400.0, 1500.0) + vec2(0.41, 0.17), 0.0).b;
+  float lump = textureLod(uWeather, q / 1900.0 + vec2(0.66, 0.08), 0.0).g;
+  float base = DECK_BASE + (bv - 0.5) * 120.0 + (rolls - 0.5) * 90.0
+             - smoothstep(0.3, 0.8, lump) * smoothstep(0.0, 0.3, c) * 150.0 - min(c, 0.3) * 60.0;
+  float top = base + 80.0 + 900.0 * sqrt(min(c, 0.5));
   float hn = (p.y - base) / (top - base);
   if (hn < 0.0 || hn > 1.0) return 0.0;
-  float body = smoothstep(0.0, 0.1, hn) * (1.0 - smoothstep(0.5, 1.0, hn));
+  hnOut = hn;
+  // rounded underside rather than a ruled ceiling
+  float body = smoothstep(0.0, 0.25, hn) * (1.0 - smoothstep(0.5, 1.0, hn));
   return smoothstep(0.0, 0.1, c) * body;
 }
 
@@ -164,7 +175,7 @@ float cloudDensity(vec3 p, vec4 w, bool detail) {
   float hn = 0.0; // height within the cloud, 0 at the base
   // the condensation level is only roughly level: each cloud's base sits a little
   // higher or lower, and it sags slightly toward the middle of the cloud
-  float baseVar = (textureLod(uWeather, (p.xz + uCloudOffset) / 1700.0 + vec2(0.23, 0.71), 0.0).r - 0.5) * 140.0;
+  float baseVar = (textureLod(uWeather, (p.xz + uCloudOffset) / 2400.0 + vec2(0.23, 0.71), 0.0).g - 0.5) * 140.0;
   float y = p.y - (w.w + baseVar - min(w.x, 0.4) * 120.0);
   if (w.x > 0.0 && y > 0.0) {
     float top = cloudTop(w);
@@ -177,10 +188,12 @@ float cloudDensity(vec3 p, vec4 w, bool detail) {
       dens = cov * body;
     }
   }
-  float deck = deckShape(p);
+  float deckHn;
+  float deck = deckShape(p, deckHn);
   if (deck > dens) {
     dens = deck;
-    hn = 0.3;
+    // the deck's own height drives the billow erosion, so its base gets lumpy too
+    hn = deckHn;
   }
   if (dens <= 0.0) return 0.0;
   vec3 q = vec3(p.x + uCloudOffset.x, p.y - uTime * 1.3, p.z + uCloudOffset.y);

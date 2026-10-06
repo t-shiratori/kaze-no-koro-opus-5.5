@@ -107,9 +107,9 @@ export class Weather {
     let d = 0;
     const bv =
       (this.sample(
-        (x + G.uCloudOffset.value.x) / 1700 + 0.23,
-        (z + G.uCloudOffset.value.y) / 1700 + 0.71,
-        0,
+        (x + G.uCloudOffset.value.x) / 2400 + 0.23,
+        (z + G.uCloudOffset.value.y) / 2400 + 0.71,
+        1,
       ) -
         0.5) *
       140;
@@ -129,7 +129,7 @@ export class Weather {
   /** CPU mirror of deckShape() in GLSL (without noise erosion). */
   deckAt(x: number, y: number, z: number): number {
     const deck = G.uDeck.value;
-    if (deck <= 0.001 || y < 820 || y > 1800) return 0;
+    if (deck <= 0.001 || y < 700 || y > 1800) return 0;
     const qx = x + G.uCloudOffset.value.x * 0.9;
     const qz = z + G.uCloudOffset.value.y * 0.9;
     const c1 = this.sample(qx / 4200 + 0.13, qz / 4200 + 0.61, 1);
@@ -137,10 +137,15 @@ export class Weather {
     const c = c1 * 0.8 + c2 * 0.2 - (1.05 + (0.45 - 1.05) * deck);
     if (c <= 0) return 0;
     const bv = this.sample(qx / 5200 + 0.31, qz / 5200 + 0.83, 1);
-    const base = 900 + (bv - 0.5) * 90 - Math.min(c, 0.3) * 60;
-    const top = base + 60 + 900 * Math.sqrt(Math.min(c, 0.5));
+    const lump = this.sample(qx / 1900 + 0.66, qz / 1900 + 0.08, 1);
+    const base =
+      900 +
+      (bv - 0.5) * 120 -
+      smoothstep(0.3, 0.8, lump) * smoothstep(0, 0.3, c) * 150 -
+      Math.min(c, 0.3) * 60;
+    const top = base + 80 + 900 * Math.sqrt(Math.min(c, 0.5));
     const hn = (y - base) / (top - base);
     if (hn < 0 || hn > 1) return 0;
-    return smoothstep(0, 0.1, c) * smoothstep(0, 0.1, hn) * (1 - smoothstep(0.5, 1, hn));
+    return smoothstep(0, 0.1, c) * smoothstep(0, 0.25, hn) * (1 - smoothstep(0.5, 1, hn));
   }
 }
