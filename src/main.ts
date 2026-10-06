@@ -17,6 +17,25 @@ import { Ocean } from "./world/ocean";
 import { buildPlane } from "./world/plane";
 import { AirTraffic } from "./world/traffic";
 
+/** Save the current frame as a PNG through a download. */
+function saveCanvas(canvas: HTMLCanvasElement, hours: number) {
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const hh = Math.floor(hours);
+    const mm = Math.floor((hours - hh) * 60);
+    const name = `mediterranean-sky_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}_${pad(hh)}${pad(mm)}.png`;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }, "image/png");
+}
+
 function start() {
   const canvas = document.createElement("canvas");
   document.body.prepend(canvas);
@@ -130,7 +149,38 @@ function start() {
   let envRT: THREE.WebGLRenderTarget | null = null;
   let envTimer = 0;
 
-  const ui = new UI(time, director);
+  // ---- photo mode: freeze the world, frame it freely, save a still ----
+  let photo = false;
+  let captureRequested = false;
+  const photoCtl = {
+    get active() {
+      return photo;
+    },
+    toggle() {
+      photo = !photo;
+      if (photo) {
+        director.enterPhoto();
+        // full quality while paused: the frame rate no longer matters
+        savedScale = renderScale;
+        renderScale = 1;
+        resize();
+      } else {
+        director.exitPhoto();
+        renderScale = savedScale;
+        resize();
+        // the world resumes: the clock must not jump by the paused time
+        timer.reset();
+      }
+      document.body.classList.toggle("photo", photo);
+      return photo;
+    },
+    capture() {
+      if (photo) captureRequested = true;
+    },
+  };
+  let savedScale = 1;
+
+  const ui = new UI(time, director, photoCtl);
   // a hard cut must not smear the previous shot's clouds into the new one
   director.cinema.onCut = () => pipeline.resetHistory();
 
@@ -147,6 +197,12 @@ function start() {
   });
   canvas.addEventListener("pointermove", (e) => {
     if (!dragging) return;
+    if (director.photoActive) {
+      director.photoOrbit(e.clientX - lastX, e.clientY - lastY);
+      lastX = e.clientX;
+      lastY = e.clientY;
+      return;
+    }
     director.userYaw -= (e.clientX - lastX) * 0.005;
     director.userElev = THREE.MathUtils.clamp(
       director.userElev + (e.clientY - lastY) * 0.004,
@@ -161,6 +217,10 @@ function start() {
   canvas.addEventListener(
     "wheel",
     (e) => {
+      if (director.photoActive) {
+        director.photoZoom(Math.exp(e.deltaY * 0.001));
+        return;
+      }
       director.userZoom = THREE.MathUtils.clamp(
         director.userZoom * Math.exp(e.deltaY * 0.001),
         0.5,
@@ -216,12 +276,14 @@ function start() {
     timer.update();
     // (dev tooling may run the page hidden at ~1 fps: allow bigger steps there)
     const rawDt = Math.min(timer.getDelta(), import.meta.env.DEV && document.hidden ? 0.6 : 0.1);
-    const dt = rawDt;
+    // in photo mode the world holds still; only the light may still change on request
+    const dt = photo ? 0 : rawDt;
+    const lightDt = rawDt;
     elapsed += dt;
     G.uTime.value = elapsed;
 
     // ---- world clock, light & wind ----
-    time.update(dt);
+    if (!photo || time.mode !== "auto") time.update(photo ? rawDt : dt);
     computeLighting(time.sunDir, time.moonDir, lighting);
     G.uTrueSunDir.value.copy(time.sunDir);
     G.uMoonDir.value.copy(time.moonDir);
@@ -231,13 +293,13 @@ function start() {
     // then on its own while the day drifts by
     const rays = time.mode === "rays";
     const autoDeck = THREE.MathUtils.smoothstep(Math.sin(elapsed * 0.0042 - 1.9), 0.72, 0.97) * 0.8;
-    G.uDeck.value = damp(G.uDeck.value, rays ? 1 : autoDeck, rays ? 0.35 : 0.15, dt);
+    G.uDeck.value = damp(G.uDeck.value, rays ? 1 : autoDeck, rays ? 0.35 : 0.15, lightDt);
     const deck = G.uDeck.value * (1 - time.night * 0.6);
     // under a cloud deck the skylight is softer and greyer
     G.uAmbZenith.value.copy(lighting.skyZenith).multiplyScalar(1 - deck * 0.45);
     G.uAmbHorizon.value.copy(lighting.skyHorizon).multiplyScalar(1 - deck * 0.3);
     G.uNight.value = time.night;
-    G.uExposure.value = damp(G.uExposure.value, lighting.exposure, 1.2, dt);
+    G.uExposure.value = damp(G.uExposure.value, lighting.exposure, 1.2, lightDt);
     const windA = 0.6 + Math.sin(elapsed * 0.0041) * 0.7 + Math.sin(elapsed * 0.0107) * 0.25;
     const windS = 6.5 + Math.sin(elapsed * 0.013 + 1) * 2.5;
     G.uWind.value.set(Math.cos(windA) * windS, Math.sin(windA) * windS);
@@ -274,7 +336,7 @@ function start() {
     pipeline.gradeHighlights.set(1.02 + dusk * 0.04, 1.0, 0.98 - dusk * 0.03);
 
     // ---- flight & camera ----
-    pilot.update(dt);
+    if (!photo) pilot.update(dt);
     plane.group.position.copy(pilot.position);
     plane.group.quaternion.copy(pilot.quaternion);
     plane.prop.rotation.z += dt * 55;
@@ -314,7 +376,7 @@ function start() {
 
     // ---- render ----
     pipeline.renderEnvironment(camera.position, lighting.sunTint);
-    envTimer -= dt;
+    envTimer -= lightDt;
     if (envTimer <= 0) {
       envTimer = time.mode === "auto" ? 2 : 0.4;
       envSeaMat.color
@@ -339,12 +401,17 @@ function start() {
     if (revealed) fade = instant ? 1 : Math.min(1, fade + dt / 3);
     pipeline.fade = fade;
     pipeline.render(scene, camera);
+    if (captureRequested) {
+      // read the canvas in the same task as the render, before it is presented
+      captureRequested = false;
+      saveCanvas(canvas, time.hours);
+    }
     ui.update();
 
     // ---- adaptive resolution ----
     frameAvg = frameAvg * 0.95 + rawDt * 1000 * 0.05;
     scaleCooldown -= dt;
-    if (scaleCooldown <= 0 && revealed && !fixedScale) {
+    if (scaleCooldown <= 0 && revealed && !fixedScale && !photo) {
       if (frameAvg > 21 && renderScale > 0.55) {
         renderScale = Math.max(0.55, renderScale - 0.1);
         resize();

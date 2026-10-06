@@ -56,6 +56,9 @@ export class Director {
   /** "calm": one slowly drifting follow camera; "cinema": cut between many angles */
   mode: CameraMode = "calm";
   readonly cinema: Cinema;
+  /** photo mode: a free camera orbiting the frozen plane */
+  photoActive = false;
+  private photo = { yaw: 0, pitch: 0.1, dist: 36, fov: 55 };
 
   constructor(
     aspect: number,
@@ -67,6 +70,59 @@ export class Director {
     this.shot = this.chase();
     this.followYaw = pilot.heading;
     this.cinema = new Cinema(pilot, islands);
+  }
+
+  /** Enter photo mode, starting from wherever the camera is right now. */
+  enterPhoto() {
+    const rel = this.camera.position.clone().sub(this.pilot.position);
+    const d = Math.max(rel.length(), 8);
+    this.photo.dist = Math.min(d, 400);
+    this.photo.yaw = Math.atan2(rel.x, rel.z);
+    this.photo.pitch = Math.asin(THREE.MathUtils.clamp(rel.y / d, -0.95, 0.95));
+    this.photo.fov = this.camera.fov;
+    this.photoActive = true;
+  }
+
+  exitPhoto() {
+    this.photoActive = false;
+    if (this.mode === "cinema") this.cinema.start();
+  }
+
+  photoOrbit(dx: number, dy: number) {
+    this.photo.yaw -= dx * 0.006;
+    this.photo.pitch = THREE.MathUtils.clamp(this.photo.pitch + dy * 0.005, -1.2, 1.45);
+  }
+
+  photoZoom(factor: number) {
+    this.photo.dist = THREE.MathUtils.clamp(this.photo.dist * factor, 7, 600);
+  }
+
+  get photoFov(): number {
+    return this.photo.fov;
+  }
+
+  set photoFov(v: number) {
+    this.photo.fov = THREE.MathUtils.clamp(v, 10, 100);
+  }
+
+  private updatePhoto() {
+    const p = this.pilot.position;
+    const ph = this.photo;
+    const cam = this.camera;
+    cam.position.set(
+      p.x + Math.sin(ph.yaw) * Math.cos(ph.pitch) * ph.dist,
+      p.y + Math.sin(ph.pitch) * ph.dist,
+      p.z + Math.cos(ph.yaw) * Math.cos(ph.pitch) * ph.dist,
+    );
+    const ground = Math.max(0, this.islands.heightAt(cam.position.x, cam.position.z));
+    if (cam.position.y < ground + 1.5) cam.position.y = ground + 1.5;
+    cam.up.set(0, 1, 0);
+    cam.lookAt(p);
+    if (Math.abs(cam.fov - ph.fov) > 0.01) {
+      cam.fov = ph.fov;
+      cam.updateProjectionMatrix();
+    }
+    cam.updateMatrixWorld();
   }
 
   setMode(mode: CameraMode) {
@@ -237,6 +293,10 @@ export class Director {
   }
 
   update(dt: number) {
+    if (this.photoActive) {
+      this.updatePhoto();
+      return;
+    }
     if (this.mode === "cinema") {
       this.cinema.sunDir.copy(this.sunDir);
       this.cinema.beamMood = this.beamMood;

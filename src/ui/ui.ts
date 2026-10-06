@@ -1,6 +1,14 @@
 import type { TimeMode, TimeOfDay } from "../env/time";
 import type { CameraMode, Director } from "../flight/director";
 
+export interface PhotoControl {
+  readonly active: boolean;
+  toggle(): boolean;
+  capture(): void;
+}
+
+const CAMERA_ICON = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.5"/></svg>`;
+
 const CAMERA_LABELS: [CameraMode, string][] = [
   ["calm", "標準"],
   ["cinema", "シネマ"],
@@ -27,6 +35,7 @@ export class UI {
   constructor(
     private time: TimeOfDay,
     private director: Director,
+    private photo: PhotoControl,
   ) {
     this.root = document.createElement("div");
     this.root.className = "ui";
@@ -74,8 +83,45 @@ export class UI {
       bar.className = `letterbox ${pos}`;
       document.body.appendChild(bar);
     }
-    this.root.append(group, camGroup, this.clock, fs);
+    const shot = document.createElement("button");
+    shot.className = "ui-fs";
+    shot.title = "フォトモード (P)";
+    shot.innerHTML = CAMERA_ICON;
+    shot.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.togglePhoto();
+    });
+    this.root.append(group, camGroup, this.clock, shot, fs);
     document.body.appendChild(this.root);
+
+    // photo mode panel: capture, lens, leave
+    this.photoPanel = document.createElement("div");
+    this.photoPanel.className = "photo-panel";
+    this.photoPanel.innerHTML = `
+      <span class="photo-hint">ドラッグで回り込み・ホイールで距離</span>
+      <label class="photo-lens">広角<input type="range" min="12" max="95" step="1" />望遠</label>
+      <button class="photo-capture" title="撮影 (Space)">${CAMERA_ICON}<span>撮影</span></button>
+      <button class="photo-exit" title="終了 (P / Esc)">終了</button>`;
+    document.body.appendChild(this.photoPanel);
+    this.lens = this.photoPanel.querySelector("input")!;
+    // the slider reads left = wide, right = telephoto
+    this.lens.addEventListener("input", () => {
+      this.director.photoFov = 107 - Number(this.lens.value);
+    });
+    this.photoPanel.querySelector(".photo-capture")!.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.capture();
+    });
+    this.photoPanel.querySelector(".photo-exit")!.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.togglePhoto();
+    });
+    for (const ev of ["pointerdown", "wheel"]) {
+      this.photoPanel.addEventListener(ev, (e) => e.stopPropagation());
+    }
+    this.flash = document.createElement("div");
+    this.flash.className = "photo-flash";
+    document.body.appendChild(this.flash);
 
     const wake = () => {
       this.root.classList.add("visible");
@@ -85,12 +131,21 @@ export class UI {
     window.addEventListener("pointermove", wake);
     window.addEventListener("pointerdown", wake);
     window.addEventListener("keydown", (e) => {
+      if (e.key === "p" || e.key === "P" || (e.key === "Escape" && this.photo.active)) {
+        if (e.key !== "Escape" || this.photo.active) this.togglePhoto();
+        return;
+      }
+      if (e.key === " " && this.photo.active) {
+        e.preventDefault();
+        this.capture();
+        return;
+      }
       const hit = LABELS.find(([, , k]) => k === e.key);
       if (hit) {
         this.time.setMode(hit[0]);
         this.refresh();
         wake();
-      } else if (e.key === "c" || e.key === "C") {
+      } else if ((e.key === "c" || e.key === "C") && !this.photo.active) {
         this.setCamera(this.director.mode === "cinema" ? "calm" : "cinema");
         wake();
       } else if (e.key === "f" || e.key === "F") {
@@ -101,6 +156,23 @@ export class UI {
       }
     });
     this.refresh();
+  }
+
+  private photoPanel: HTMLDivElement;
+  private lens: HTMLInputElement;
+  private flash: HTMLDivElement;
+
+  private togglePhoto() {
+    const on = this.photo.toggle();
+    if (on) this.lens.value = String(107 - this.director.photoFov);
+    this.refresh();
+  }
+
+  private capture() {
+    this.photo.capture();
+    this.flash.classList.remove("on");
+    void this.flash.offsetWidth;
+    this.flash.classList.add("on");
   }
 
   private setCamera(mode: CameraMode) {

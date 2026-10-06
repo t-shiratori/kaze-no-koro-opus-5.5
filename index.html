@@ -112,6 +112,102 @@
       .ui {
         z-index: 2;
       }
+      /* ---- photo mode ---- */
+      body.photo .letterbox {
+        height: 0;
+      }
+      body.photo .ui {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+      }
+      .photo-panel {
+        position: fixed;
+        left: 50%;
+        bottom: 20px;
+        transform: translate(-50%, 8px);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 6px 8px 6px 18px;
+        border-radius: 999px;
+        background: rgba(10, 20, 30, 0.38);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        color: rgba(255, 250, 240, 0.75);
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 0.6s ease,
+          transform 0.6s ease;
+        z-index: 3;
+      }
+      body.photo .photo-panel {
+        opacity: 1;
+        transform: translate(-50%, 0);
+        pointer-events: auto;
+      }
+      /* the time strip moves up a little so the two never collide on narrow screens */
+      body.photo .ui {
+        bottom: 74px;
+      }
+      .photo-panel button {
+        font: inherit;
+        color: #fff;
+        border: 0;
+        border-radius: 999px;
+        padding: 7px 14px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 250, 240, 0.12);
+      }
+      .photo-panel .photo-capture {
+        background: rgba(255, 250, 240, 0.9);
+        color: #14202c;
+      }
+      .photo-lens {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .photo-lens input {
+        width: 120px;
+        accent-color: #f4efe4;
+      }
+      .photo-flash {
+        position: fixed;
+        inset: 0;
+        background: #fff;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 4;
+      }
+      .photo-flash.on {
+        animation: photo-flash 0.5s ease-out;
+      }
+      @keyframes photo-flash {
+        from {
+          opacity: 0.55;
+        }
+        to {
+          opacity: 0;
+        }
+      }
+      @media (max-width: 900px) {
+        .photo-hint {
+          display: none;
+        }
+      }
+      @media (max-width: 520px) {
+        .photo-lens input {
+          width: 80px;
+        }
+      }
       .veil {
         position: fixed;
         inset: 0;
