@@ -237,7 +237,7 @@ function start() {
     G.uWind.value.set(Math.cos(windA) * windS, Math.sin(windA) * windS);
     G.uCloudOffset.value.addScaledVector(G.uWind.value, dt * 1.6);
     G.uCloudCover.value =
-      0.44 +
+      0.5 +
       Math.sin(elapsed * 0.0023 + 2) * 0.09 +
       Math.sin(elapsed * 0.0071) * 0.05 -
       G.uDeck.value * 0.12;

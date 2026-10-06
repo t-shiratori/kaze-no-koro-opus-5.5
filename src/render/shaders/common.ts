@@ -162,13 +162,16 @@ float deckShape(vec3 p) {
 float cloudDensity(vec3 p, vec4 w, bool detail) {
   float dens = 0.0;
   float hn = 0.0; // height within the cloud, 0 at the base
-  float y = p.y - w.w;
+  // the condensation level is only roughly level: each cloud's base sits a little
+  // higher or lower, and it sags slightly toward the middle of the cloud
+  float baseVar = (textureLod(uWeather, (p.xz + uCloudOffset) / 1700.0 + vec2(0.23, 0.71), 0.0).r - 0.5) * 140.0;
+  float y = p.y - (w.w + baseVar - min(w.x, 0.4) * 120.0);
   if (w.x > 0.0 && y > 0.0) {
     float top = cloudTop(w);
     hn = y / top;
     if (hn < 1.0) {
-      // fair-weather cumulus: a flat base under a rounded, dome-like crown (not a peak)
-      float body = smoothstep(0.0, 0.1, hn) * sqrt(clamp(1.0 - hn * hn, 0.0, 1.0));
+      // cumulus: a rounded underside (not a knife-flat disc) under a dome-like crown
+      float body = smoothstep(0.0, 0.22, hn) * sqrt(clamp(1.0 - hn * hn, 0.0, 1.0));
       // density falls off gradually toward the rim so the billows can sculpt the sides
       float cov = smoothstep(0.0, 0.3, w.x);
       dens = cov * body;
@@ -181,8 +184,8 @@ float cloudDensity(vec3 p, vec4 w, bool detail) {
   }
   if (dens <= 0.0) return 0.0;
   vec3 q = vec3(p.x + uCloudOffset.x, p.y - uTime * 1.3, p.z + uCloudOffset.y);
-  // big rounded billows (inverted Worley cells of ~180-350 m) carve the cauliflower silhouette;
-  // they bite hardest into the crown and hardly at all into the flat base
+  // big rounded billows (inverted Worley cells of ~180-350 m) carve the cauliflower silhouette
+  // all around: hardest into the crown, but the underside gets lumpy too
   vec4 n = textureLod(uNoise3D, q / vec3(1750.0, 1150.0, 1750.0), 0.0);
   float rn = clamp((n.r - 0.6) / 0.27, 0.0, 1.0);
   float gn = clamp((n.g - 0.24) / 0.48, 0.0, 1.0);
@@ -190,7 +193,7 @@ float cloudDensity(vec3 p, vec4 w, bool detail) {
   rn = 1.0 - (1.0 - rn) * (1.0 - rn);
   gn = 1.0 - (1.0 - gn) * (1.0 - gn);
   float billow = rn * 0.5 + gn * 0.5;
-  float bite = mix(0.15, 0.7, smoothstep(0.02, 0.5, hn));
+  float bite = mix(0.45, 0.72, smoothstep(0.05, 0.5, hn));
   dens = remap(dens, (1.0 - billow) * bite, 1.0, 0.0, 1.0);
   if (detail && dens > 0.0) {
     // smaller puffs on the puffs, gently curled by the larger ones
@@ -201,7 +204,7 @@ float cloudDensity(vec3 p, vec4 w, bool detail) {
     dn = 1.0 - (1.0 - dn) * (1.0 - dn);
     dn2 = 1.0 - (1.0 - dn2) * (1.0 - dn2);
     dn = mix(dn, dn2, 0.25);
-    dens = remap(dens, (1.0 - dn) * mix(0.1, 0.38, smoothstep(0.0, 0.4, hn)), 1.0, 0.0, 1.0);
+    dens = remap(dens, (1.0 - dn) * mix(0.28, 0.38, smoothstep(0.0, 0.4, hn)), 1.0, 0.0, 1.0);
   }
   // soft cotton rather than solid rock: a wider, translucent rim
   return clamp(dens * 2.2, 0.0, 1.0);

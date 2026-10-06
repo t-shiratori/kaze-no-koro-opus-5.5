@@ -105,12 +105,20 @@ export class Weather {
   cloudinessAt(x: number, y: number, z: number): number {
     const w = this.weatherAt(x, z, this.tmp);
     let d = 0;
-    const yy = y - w[3];
+    const bv =
+      (this.sample(
+        (x + G.uCloudOffset.value.x) / 1700 + 0.23,
+        (z + G.uCloudOffset.value.y) / 1700 + 0.71,
+        0,
+      ) -
+        0.5) *
+      140;
+    const yy = y - (w[3] + bv - Math.min(w[0], 0.4) * 120);
     if (yy > 0 && w[0] > 0) {
       const top = 120 + 1250 * (0.5 + 0.5 * w[1]) * Math.sqrt(Math.min(w[0], 0.6));
       const hn = yy / top;
       if (hn < 1) {
-        const body = smoothstep(0, 0.1, hn) * Math.sqrt(clamp(1 - hn * hn, 0, 1));
+        const body = smoothstep(0, 0.22, hn) * Math.sqrt(clamp(1 - hn * hn, 0, 1));
         d = smoothstep(0, 0.3, w[0]) * body;
       }
     }
