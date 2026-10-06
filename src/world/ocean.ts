@@ -1,15 +1,7 @@
 import * as THREE from "three";
-import { rng } from "../core/noise";
-import { FullscreenPass } from "../render/fsq";
-import { G, globalsFor } from "../render/globals";
-import {
-  DETAIL_COMPONENTS,
-  MAX_BOATS,
-  MAX_WAVES,
-  OCEAN_FRAG,
-  OCEAN_VERT,
-  WAVE_DETAIL_FRAG,
-} from "../render/shaders/ocean";
+import { globalsFor } from "../render/globals";
+import { MAX_BOATS, MAX_WAVES, OCEAN_FRAG, OCEAN_VERT } from "../render/shaders/ocean";
+import { CASCADES, OceanFFT } from "./oceanFFT";
 
 export interface WakeSource {
   x: number;
@@ -66,42 +58,11 @@ function radialGrid(
 export class Ocean {
   readonly mesh: THREE.Mesh;
   readonly material: THREE.ShaderMaterial;
-  private detailRT: THREE.WebGLRenderTarget;
-  private detailPass: FullscreenPass;
+  private fft: OceanFFT;
 
   constructor(renderer: THREE.WebGLRenderer) {
-    // ---- animated ripple detail texture ----
-    this.detailRT = new THREE.WebGLRenderTarget(256, 256, {
-      type: THREE.HalfFloatType,
-      wrapS: THREE.RepeatWrapping,
-      wrapT: THREE.RepeatWrapping,
-      minFilter: THREE.LinearMipmapLinearFilter,
-      magFilter: THREE.LinearFilter,
-      generateMipmaps: true,
-      depthBuffer: false,
-    });
-    this.detailRT.texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-    const r = rng(1234);
-    const makeComps = (maxN: number, slope: number, spread: number) => {
-      const arr: THREE.Vector4[] = [];
-      while (arr.length < DETAIL_COMPONENTS) {
-        const mag = 1 + Math.pow(r(), 1.3) * (maxN - 1);
-        const ang = (r() - 0.5) * 2 * spread + (r() < 0.12 ? Math.PI : 0);
-        const nx = Math.round(Math.cos(ang) * mag);
-        const ny = Math.round(Math.sin(ang) * mag);
-        if (nx === 0 && ny === 0) continue;
-        const n = Math.hypot(nx, ny);
-        const dirW = Math.pow(Math.max(Math.cos(Math.atan2(ny, nx)), 0.15), 2);
-        arr.push(new THREE.Vector4(nx, ny, (slope * dirW) / Math.pow(n, 0.3), r() * Math.PI * 2));
-      }
-      return arr;
-    };
-    this.detailPass = new FullscreenPass(WAVE_DETAIL_FRAG, {
-      uTime: G.uTime,
-      uCompA: { value: makeComps(24, 0.06, 1.45) },
-      uCompB: { value: makeComps(20, 0.05, 1.35) },
-      uTile: { value: new THREE.Vector2(19, 97) },
-    });
+    // ---- wind waves and ripples: GPU FFT ocean ----
+    this.fft = new OceanFFT(renderer);
 
     // ---- gerstner swell ----
     const waves: THREE.Vector4[] = [];
@@ -154,8 +115,10 @@ export class Ocean {
         uWaves: { value: waves },
         uWaveQ: { value: q },
         uOceanCenter: { value: new THREE.Vector3() },
-        uDetail: { value: this.detailRT.texture },
-        uDetailTile: { value: new THREE.Vector2(19, 97) },
+        uFFT0: { value: this.fft.slopes[0] },
+        uFFT1: { value: this.fft.slopes[1] },
+        uFFT2: { value: this.fft.slopes[2] },
+        uFFTSize: { value: new THREE.Vector3(...CASCADES.map((c) => c.size)) },
         uBoatA: { value: boatA },
         uBoatB: { value: boatB },
         uBoatCount: { value: 0 },
@@ -169,7 +132,7 @@ export class Ocean {
   }
 
   update(renderer: THREE.WebGLRenderer, camera: THREE.Camera, wakes: WakeSource[]) {
-    this.detailPass.render(renderer, this.detailRT);
+    this.fft.update(renderer);
     const c = this.material.uniforms.uOceanCenter.value as THREE.Vector3;
     c.set(camera.position.x, 0, camera.position.z);
     const A = this.material.uniforms.uBoatA.value as THREE.Vector4[];

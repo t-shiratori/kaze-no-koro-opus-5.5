@@ -8,33 +8,6 @@ import {
 
 export const MAX_WAVES = 4;
 export const MAX_BOATS = 16;
-export const DETAIL_COMPONENTS = 64;
-
-/** Animated, tileable ripple slopes: rg = fine layer, ba = coarse layer. */
-export const WAVE_DETAIL_FRAG = /* glsl */ `
-precision highp float;
-in vec2 vUv;
-out vec4 outColor;
-uniform float uTime;
-uniform vec4 uCompA[${DETAIL_COMPONENTS}]; // nx, ny, slopeAmp, phase
-uniform vec4 uCompB[${DETAIL_COMPONENTS}];
-uniform vec2 uTile; // tile sizes (m) of layer A and B
-vec2 layer(vec4 comps[${DETAIL_COMPONENTS}], float tile) {
-  vec2 s = vec2(0.0);
-  for (int i = 0; i < ${DETAIL_COMPONENTS}; i++) {
-    vec4 c = comps[i];
-    vec2 k = c.xy * 6.2831853 / tile;
-    float kl = length(k);
-    float w = sqrt(9.81 * kl);
-    float ph = dot(c.xy, vUv) * 6.2831853 - w * uTime + c.w;
-    s += -c.z * sin(ph) * (k / kl);
-  }
-  return s;
-}
-void main() {
-  outColor = vec4(layer(uCompA, uTile.x), layer(uCompB, uTile.y));
-}
-`;
 
 const OCEAN_COMMON = /* glsl */ `
 uniform vec4 uWaves[${MAX_WAVES}];  // dir.xy, k, amplitude
@@ -103,8 +76,10 @@ ${SKY_LUT_GLSL}
 ${GLOBALS_GLSL}
 ${CLOUD_FIELD_GLSL}
 ${OCEAN_COMMON}
-uniform sampler2D uDetail;
-uniform vec2 uDetailTile;
+uniform sampler2D uFFT0;
+uniform sampler2D uFFT1;
+uniform sampler2D uFFT2;
+uniform vec3 uFFTSize;
 uniform vec4 uBoatA[${MAX_BOATS}]; // x, z, heading, speed
 uniform vec4 uBoatB[${MAX_BOATS}]; // wake length, beam, strength, _
 uniform int uBoatCount;
@@ -178,27 +153,36 @@ void main() {
   vec2 gp = P.xz - uWind * uTime * 1.4;
   float gust = fbmValue(rot(gp, -windA) * vec2(0.0022, 0.0045) + 3.7);
   gust = smoothstep(0.3, 0.75, gust);
-  float rippleStrength = mix(0.55, 1.35, gust);
 
-  // ---- detail normal from animated ripple textures, rotated into wind frame ----
+  // ---- wind waves & ripples from the FFT cascades, in the wind's frame ----
+  // each cascade fades out once a pixel covers more than a few of its smallest waves;
+  // mipmaps average the rest, so nothing sub-pixel turns into crunchy noise
   vec2 q = rot(P.xz, -windA);
-  vec4 d1 = texture(uDetail, q / uDetailTile.x);
-  vec4 d2 = texture(uDetail, q / uDetailTile.y + 0.37);
-  vec4 d3 = texture(uDetail, rot(q, 0.9) / (uDetailTile.x * 0.31) + 0.61);
-  vec4 d5 = texture(uDetail, rot(q, 2.1) / (uDetailTile.x * 1.73) + 0.29);
-  float fadeFine = 1.0 - smoothstep(40.0, 600.0, dist);
-  float fadeMid = 1.0 - smoothstep(300.0, 4000.0, dist);
-  // break up tiling with slow, large-scale variation between layers
-  float mixA = valueNoise(P.xz * 0.004 + 1.3);
-  float mixB = valueNoise(P.xz * 0.0017 - 4.1);
-  vec2 slope = (mix(d1.xy, d5.xy, mixA) * rippleStrength + d3.xy * 0.5 * rippleStrength) * fadeFine
-             + mix(d2.zw, d5.zw * 0.8, mixB * 0.6) * fadeMid * mix(0.8, 1.15, gust);
+  float fp = length(fwidth(P.xz));
+  vec2 s0 = texture(uFFT0, q / uFFTSize.x).xy;
+  vec2 s1 = rot(texture(uFFT1, rot(q, 0.61) / uFFTSize.y + 0.37).xy, -0.61);
+  vec2 s2 = rot(texture(uFFT2, rot(q, -0.83) / uFFTSize.z + 0.71).xy, 0.83);
+  float f0 = 1.0 - smoothstep(1.5, 6.0, fp);
+  float f1 = 1.0 - smoothstep(0.3, 1.2, fp);
+  float f2 = 1.0 - smoothstep(0.06, 0.25, fp);
+  float fadeFine = f1;
+  vec2 slope = (s0 * f0 * mix(0.85, 1.15, gust) + (s1 * f1 + s2 * f2) * mix(0.6, 1.3, gust));
   slope = rot(slope, windA);
   float shallowCalm = smoothstep(0.0, 6.0, vDepth);
   slope *= mix(0.35, 1.0, shallowCalm);
-  vec3 N = normalize(swellNormal(P.xz, dist, smoothstep(0.0, 14.0, vDepth)) + vec3(-slope.x, 0.0, -slope.y));
+  vec3 Ns = swellNormal(P.xz, dist, smoothstep(0.0, 14.0, vDepth));
+  vec3 N = normalize(Ns + vec3(-slope.x, 0.0, -slope.y));
+  // specular anti-aliasing: where the normal changes a lot within one pixel, the pixel
+  // really sees a blur of many facets - widen the highlight and soften the reflection
+  vec3 dNx = dFdx(N);
+  vec3 dNy = dFdy(N);
+  float nVar = dot(dNx, dNx) + dot(dNy, dNy);
+  float aa = clamp(nVar * 2.0, 0.0, 1.0);
   // roughness grows with distance: unresolved ripples blur into a broad glitter path
-  float rough = mix(0.035, 0.22, smoothstep(80.0, 9000.0, dist)) * mix(0.8, 1.2, gust);
+  float rough = mix(0.06, 0.22, smoothstep(80.0, 9000.0, dist)) * mix(0.85, 1.15, gust);
+  rough = sqrt(rough * rough + min(nVar * 1.5, 0.12));
+  // reflections use a normal pulled toward the smooth swell where ripples are unresolved
+  vec3 Nr = normalize(mix(N, Ns, aa * 0.7));
 
   // ---- terrain & shallows ----
   float ground = terrainHeightAt(P.xz);
@@ -206,19 +190,27 @@ void main() {
 
   // ---- lighting terms ----
   float shadow = cloudShadowAt(P);
-  float NdotV = max(dot(N, V), 0.0);
+  float NdotV = max(dot(Nr, V), 0.0);
   float fres = 0.02 + 0.98 * pow(1.0 - NdotV, 5.0);
   fres = min(fres, 0.85);
 
-  vec3 R = reflect(-V, N);
+  vec3 R = reflect(-V, Nr);
   R.y = abs(R.y) + 0.002;
   vec3 sky = skyLut(normalize(R));
   // reflected clouds: sample coverage where the reflected ray meets the cloud layer
   {
-    float tc = (1300.0 - P.y) / max(R.y, 0.03);
-    vec3 cp = P + R * min(tc, 45000.0);
-    vec4 w = cloudWeather(cp.xz);
-    float cov = smoothstep(0.01, 0.2, w.x) * (1.0 - smoothstep(20000.0, 45000.0, tc));
+    // clouds are big and the ripples blur their image: reflect off the smooth swell only
+    vec3 Rc = reflect(-V, Ns);
+    Rc.y = abs(Rc.y) + 0.002;
+    float tc = (1300.0 - P.y) / max(Rc.y, 0.03);
+    vec3 cp = P + Rc * min(tc, 45000.0);
+    // filtered (mipmapped) coverage: neighbouring pixels reflect far-apart sky points,
+    // so a sharp lookup would sparkle into noise
+    vec2 cq = (cp.xz + uCloudOffset) / 21000.0;
+    float covRaw = texture(uWeather, cq).r;
+    float cloudiness = clamp(texture(uWeather, (cp.xz + uCloudOffset) / 110000.0 + vec2(0.37, 0.11)).g * 0.9 + uCloudCover - 0.5, 0.04, 0.9);
+    float cov = smoothstep(0.0, 0.25, covRaw - (1.0 - cloudiness)) * (1.0 - smoothstep(20000.0, 45000.0, tc));
+    cov *= 1.0 - aa * 0.5;
     vec3 cloudCol = uAmbZenith * 1.3 + uSunColor * 0.075 * (0.4 + 0.6 * max(uSunDir.y, 0.0));
     sky = mix(sky, cloudCol, cov * 0.8);
   }
@@ -231,10 +223,8 @@ void main() {
   float dn = NdotH * NdotH * (a2 - 1.0) + 1.0;
   float D = a2 / (3.14159 * dn * dn);
   float spec = D * fres / max(4.0 * NdotV + 0.05, 0.05) * NdotL;
-  // sparkling glints near the camera
-  vec2 gcell = floor(P.xz * 1.6);
-  float gl = step(0.985, hash12(gcell + floor(uTime * 6.0))) * fadeFine;
-  spec += gl * pow(NdotH, 900.0) * 30.0;
+  // keep single-pixel fireflies in check
+  spec = min(spec, 40.0);
   vec3 specCol = uSunColor * spec * shadow * 0.9;
 
   // ---- water body: deep navy, turning emerald where sunlight pours in ----

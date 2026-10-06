@@ -201,6 +201,12 @@ function start() {
   const veil = document.getElementById("veil");
   const params = new URLSearchParams(location.search);
   const instant = params.has("instant");
+  // dev: ?scale=1 pins the render resolution (no adaptive scaling)
+  const fixedScale = params.has("scale");
+  if (fixedScale) {
+    renderScale = THREE.MathUtils.clamp(Number(params.get("scale")) || 1, 0.3, 1);
+    resize();
+  }
   if (params.has("t")) time.hours = Number(params.get("t"));
   const tmpV = new THREE.Vector3();
   const tmpC = new THREE.Color();
@@ -338,7 +344,7 @@ function start() {
     // ---- adaptive resolution ----
     frameAvg = frameAvg * 0.95 + rawDt * 1000 * 0.05;
     scaleCooldown -= dt;
-    if (scaleCooldown <= 0 && revealed) {
+    if (scaleCooldown <= 0 && revealed && !fixedScale) {
       if (frameAvg > 21 && renderScale > 0.55) {
         renderScale = Math.max(0.55, renderScale - 0.1);
         resize();
