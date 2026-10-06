@@ -1,4 +1,10 @@
 import type { TimeMode, TimeOfDay } from "../env/time";
+import type { CameraMode, Director } from "../flight/director";
+
+const CAMERA_LABELS: [CameraMode, string][] = [
+  ["calm", "標準"],
+  ["cinema", "シネマ"],
+];
 
 const LABELS: [TimeMode, string, string][] = [
   ["auto", "移ろい", "0"],
@@ -13,11 +19,15 @@ const LABELS: [TimeMode, string, string][] = [
 export class UI {
   private root: HTMLDivElement;
   private buttons = new Map<TimeMode, HTMLButtonElement>();
+  private camButtons = new Map<CameraMode, HTMLButtonElement>();
   private clock: HTMLSpanElement;
   private hideTimer = 0;
   private hidden = false;
 
-  constructor(private time: TimeOfDay) {
+  constructor(
+    private time: TimeOfDay,
+    private director: Director,
+  ) {
     this.root = document.createElement("div");
     this.root.className = "ui";
     const group = document.createElement("div");
@@ -44,7 +54,27 @@ export class UI {
       e.stopPropagation();
       toggleFullscreen();
     });
-    this.root.append(group, this.clock, fs);
+    // camera: calm follow or film-style auto direction
+    const camGroup = document.createElement("div");
+    camGroup.className = "ui-group";
+    for (const [mode, label] of CAMERA_LABELS) {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.title = `カメラ: ${label} (C)`;
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.setCamera(mode);
+      });
+      this.camButtons.set(mode, b);
+      camGroup.appendChild(b);
+    }
+    // letterbox bars for the cinema mode
+    for (const pos of ["top", "bottom"]) {
+      const bar = document.createElement("div");
+      bar.className = `letterbox ${pos}`;
+      document.body.appendChild(bar);
+    }
+    this.root.append(group, camGroup, this.clock, fs);
     document.body.appendChild(this.root);
 
     const wake = () => {
@@ -60,6 +90,9 @@ export class UI {
         this.time.setMode(hit[0]);
         this.refresh();
         wake();
+      } else if (e.key === "c" || e.key === "C") {
+        this.setCamera(this.director.mode === "cinema" ? "calm" : "cinema");
+        wake();
       } else if (e.key === "f" || e.key === "F") {
         toggleFullscreen();
       } else if (e.key === "h" || e.key === "H") {
@@ -70,8 +103,15 @@ export class UI {
     this.refresh();
   }
 
+  private setCamera(mode: CameraMode) {
+    this.director.setMode(mode);
+    document.body.classList.toggle("cinema", mode === "cinema");
+    this.refresh();
+  }
+
   private refresh() {
     for (const [m, b] of this.buttons) b.classList.toggle("active", m === this.time.mode);
+    for (const [m, b] of this.camButtons) b.classList.toggle("active", m === this.director.mode);
   }
 
   update() {

@@ -3,6 +3,9 @@ import { Spring, damp, dampAngle, wobble } from "../core/math";
 import type { Weather } from "../env/weather";
 import type { IslandManager } from "../world/islands/manager";
 import type { Autopilot } from "./autopilot";
+import { Cinema } from "./cinema";
+
+export type CameraMode = "calm" | "cinema";
 
 interface Shot {
   name: string;
@@ -50,6 +53,9 @@ export class Director {
   readonly sunDir = new THREE.Vector3(0, 1, 0);
   beamMood = 0;
   private wasInCloud = false;
+  /** "calm": one slowly drifting follow camera; "cinema": cut between many angles */
+  mode: CameraMode = "calm";
+  readonly cinema: Cinema;
 
   constructor(
     aspect: number,
@@ -60,6 +66,21 @@ export class Director {
     this.camera = new THREE.PerspectiveCamera(55, aspect, 1.0, 60000);
     this.shot = this.chase();
     this.followYaw = pilot.heading;
+    this.cinema = new Cinema(pilot, islands);
+  }
+
+  setMode(mode: CameraMode) {
+    if (mode === this.mode) return;
+    this.mode = mode;
+    if (mode === "cinema") this.cinema.start();
+    else {
+      // come back on a fresh calm composition
+      this.followYaw = this.pilot.heading;
+      this.shot = this.chase();
+      this.timer = this.shot.duration;
+      this.userYaw = this.userElev = 0;
+      this.userZoom = 1;
+    }
   }
 
   /** Choose a fresh composition soon (e.g. when the mood of the world changes). */
@@ -212,10 +233,17 @@ export class Director {
   }
 
   get shotName(): string {
-    return this.shot.name;
+    return this.mode === "cinema" ? this.cinema.shotName : this.shot.name;
   }
 
   update(dt: number) {
+    if (this.mode === "cinema") {
+      this.cinema.sunDir.copy(this.sunDir);
+      this.cinema.beamMood = this.beamMood;
+      this.cinema.update(dt, this.camera);
+      this.followYaw = this.pilot.heading;
+      return;
+    }
     this.time += dt;
     this.idle += dt;
     this.timer -= dt;

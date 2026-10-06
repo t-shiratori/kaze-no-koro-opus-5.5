@@ -89,6 +89,29 @@
         color: rgba(255, 250, 240, 0.6);
         font-variant-numeric: tabular-nums;
       }
+      .letterbox {
+        position: fixed;
+        left: 0;
+        right: 0;
+        height: 0;
+        background: #000;
+        pointer-events: none;
+        transition: height 1.4s ease;
+        z-index: 1;
+      }
+      .letterbox.top {
+        top: 0;
+      }
+      .letterbox.bottom {
+        bottom: 0;
+      }
+      body.cinema .letterbox {
+        /* 2.39:1 scope framing */
+        height: max(0px, calc((100vh - 100vw / 2.39) / 2));
+      }
+      .ui {
+        z-index: 2;
+      }
       .veil {
         position: fixed;
         inset: 0;

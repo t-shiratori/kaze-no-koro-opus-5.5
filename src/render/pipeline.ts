@@ -162,6 +162,11 @@ export class Pipeline {
     });
   }
 
+  /** Forget the temporal cloud history (after a hard camera cut). */
+  resetHistory() {
+    this.historyValid = false;
+  }
+
   setSize(w: number, h: number) {
     w = Math.max(2, Math.floor(w));
     h = Math.max(2, Math.floor(h));

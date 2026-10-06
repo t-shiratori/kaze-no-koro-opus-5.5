@@ -130,7 +130,9 @@ function start() {
   let envRT: THREE.WebGLRenderTarget | null = null;
   let envTimer = 0;
 
-  const ui = new UI(time);
+  const ui = new UI(time, director);
+  // a hard cut must not smear the previous shot's clouds into the new one
+  director.cinema.onCut = () => pipeline.resetHistory();
 
   // ---- interaction: drag to look around, wheel to zoom; it drifts back by itself ----
   let dragging = false;
