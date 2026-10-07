@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>地中海の空</title>
+    <title>風の航路</title>
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%231d4f7a%27/%3E%3Ccircle cx=%2721%27 cy=%2712%27 r=%275%27 fill=%27%23f6d58a%27/%3E%3Cpath d=%27M4 22c4-2 8 2 12 0s8-2 12 0v6H4z%27 fill=%27%2378c3d6%27/%3E%3C/svg%3E"
@@ -208,22 +208,263 @@
           width: 80px;
         }
       }
+      /* ---- loading veil: a night horizon the little flying boat crosses ---- */
+      @property --open {
+        syntax: "<percentage>";
+        inherits: false;
+        initial-value: 0%;
+      }
       .veil {
+        --p: 0;
         position: fixed;
         inset: 0;
-        display: grid;
-        place-items: center;
-        background: #0b1624;
-        transition: opacity 2.4s ease;
+        z-index: 10;
+        overflow: hidden;
         pointer-events: none;
+        background: linear-gradient(
+          to bottom,
+          #050b15 0%,
+          #0b1830 38%,
+          #1a2c45 49.6%,
+          #0d1a2b 50.4%,
+          #070f1b 100%
+        );
+        /* opens from the horizon outwards, like a dawn breaking along it */
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          #000 calc(50% - var(--open)),
+          transparent calc(50% - var(--open) * 0.55),
+          transparent calc(50% + var(--open) * 0.55),
+          #000 calc(50% + var(--open))
+        );
+        mask-image: linear-gradient(
+          to bottom,
+          #000 calc(50% - var(--open)),
+          transparent calc(50% - var(--open) * 0.55),
+          transparent calc(50% + var(--open) * 0.55),
+          #000 calc(50% + var(--open))
+        );
       }
-      .veil span {
-        font-size: 15px;
-        letter-spacing: 0.5em;
-        color: rgba(244, 239, 228, 0.55);
-      }
-      .veil.gone {
+      .veil.open {
+        --open: 130%;
         opacity: 0;
+        transition:
+          --open 2.6s cubic-bezier(0.55, 0, 0.2, 1),
+          opacity 2.2s ease 0.9s;
+      }
+      .veil-stars {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1.5px;
+        height: 1.5px;
+        border-radius: 50%;
+        background: transparent;
+        box-shadow:
+          8vw 12vh #f4efe4,
+          17vw 31vh rgba(244, 239, 228, 0.6),
+          24vw 7vh rgba(244, 239, 228, 0.8),
+          31vw 22vh #f4efe4,
+          38vw 39vh rgba(244, 239, 228, 0.5),
+          44vw 15vh rgba(244, 239, 228, 0.7),
+          52vw 4vh #f4efe4,
+          57vw 27vh rgba(244, 239, 228, 0.55),
+          63vw 11vh rgba(244, 239, 228, 0.8),
+          69vw 35vh rgba(244, 239, 228, 0.5),
+          74vw 19vh #f4efe4,
+          81vw 6vh rgba(244, 239, 228, 0.65),
+          87vw 29vh rgba(244, 239, 228, 0.8),
+          93vw 14vh #f4efe4,
+          4vw 41vh rgba(244, 239, 228, 0.4),
+          13vw 2vh rgba(244, 239, 228, 0.7),
+          28vw 44vh rgba(244, 239, 228, 0.35),
+          48vw 33vh rgba(244, 239, 228, 0.45),
+          78vw 42vh rgba(244, 239, 228, 0.35),
+          97vw 37vh rgba(244, 239, 228, 0.5);
+        animation: veil-twinkle 4.5s ease-in-out infinite alternate;
+      }
+      .veil-stars.b {
+        transform: translate(3.5vw, 5vh) scale(0.8);
+        animation-duration: 3.2s;
+        animation-delay: -2s;
+      }
+      @keyframes veil-twinkle {
+        from {
+          opacity: 0.35;
+        }
+        to {
+          opacity: 0.9;
+        }
+      }
+      /* the first light waiting under the horizon */
+      .veil-glow {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 80vmin;
+        height: 26vmin;
+        margin: -13vmin 0 0 -40vmin;
+        border-radius: 50%;
+        background: radial-gradient(
+          closest-side,
+          rgba(246, 213, 138, 0.22),
+          rgba(246, 190, 120, 0.08) 55%,
+          transparent
+        );
+        animation: veil-breathe 5s ease-in-out infinite alternate;
+        transition:
+          transform 1.4s cubic-bezier(0.3, 0, 0.2, 1),
+          opacity 1.4s ease;
+      }
+      @keyframes veil-breathe {
+        from {
+          opacity: 0.55;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .veil.ready .veil-glow {
+        animation: none;
+        opacity: 1;
+        transform: scale(3.2, 5);
+        background: radial-gradient(
+          closest-side,
+          rgba(255, 236, 196, 0.85),
+          rgba(246, 200, 130, 0.35) 45%,
+          transparent
+        );
+      }
+      .veil-center {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: min(440px, 72vw);
+        transform: translateX(-50%);
+      }
+      .veil-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 1px;
+        background: linear-gradient(
+          to right,
+          transparent,
+          rgba(244, 239, 228, 0.22) 15%,
+          rgba(244, 239, 228, 0.22) 85%,
+          transparent
+        );
+        transition: transform 1.2s cubic-bezier(0.5, 0, 0.2, 1);
+      }
+      .veil-trail {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 1px;
+        width: 100%;
+        transform-origin: left;
+        transform: scaleX(var(--p));
+        background: linear-gradient(to right, transparent, rgba(255, 228, 170, 0.9));
+        box-shadow: 0 0 8px rgba(255, 220, 150, 0.6);
+      }
+      /* a glint that keeps running along the horizon, even while the page is busy */
+      .veil-line::after {
+        content: "";
+        position: absolute;
+        top: -1px;
+        left: 0;
+        width: 22%;
+        height: 3px;
+        border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(255, 245, 225, 0.7), transparent);
+        animation: veil-glint 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+      }
+      @keyframes veil-glint {
+        from {
+          transform: translateX(-30%);
+          opacity: 0;
+        }
+        20%,
+        80% {
+          opacity: 1;
+        }
+        to {
+          transform: translateX(380%);
+          opacity: 0;
+        }
+      }
+      .veil.ready .veil-line {
+        transform: scaleX(6);
+      }
+      .veil-plane {
+        position: absolute;
+        left: 0;
+        top: -22px;
+        width: 100%;
+        height: 0;
+        transform: translateX(calc(var(--p) * 100%));
+      }
+      .veil-plane svg {
+        position: absolute;
+        left: -17px;
+        width: 34px;
+        height: 14px;
+        color: #f4efe4;
+        animation: veil-bob 3.4s ease-in-out infinite;
+      }
+      .veil-plane .reflect {
+        top: 30px;
+        opacity: 0.16;
+        transform: scaleY(-1);
+        filter: blur(0.6px);
+        animation-name: veil-bob-r;
+      }
+      @keyframes veil-bob {
+        0%,
+        100% {
+          transform: translateY(0) rotate(-1.2deg);
+        }
+        50% {
+          transform: translateY(-3px) rotate(1deg);
+        }
+      }
+      @keyframes veil-bob-r {
+        0%,
+        100% {
+          transform: scaleY(-1) translateY(0) rotate(1.2deg);
+        }
+        50% {
+          transform: scaleY(-1) translateY(-3px) rotate(-1deg);
+        }
+      }
+      .veil.ready .veil-plane {
+        opacity: 0;
+        transition: opacity 0.8s ease;
+      }
+      .veil-text {
+        position: absolute;
+        left: 50%;
+        top: 28px;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        font-size: 12px;
+        letter-spacing: 0.5em;
+        padding-left: 0.5em;
+        color: rgba(244, 239, 228, 0.5);
+        transition: opacity 0.9s ease;
+      }
+      .veil-text.out,
+      .veil.ready .veil-text {
+        opacity: 0;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .veil-stars,
+        .veil-glow,
+        .veil-line::after,
+        .veil-plane svg {
+          animation: none;
+        }
       }
       .nogl {
         position: fixed;
@@ -237,7 +478,35 @@
     </style>
   </head>
   <body>
-    <div class="veil" id="veil"><span>地中海の空</span></div>
+    <div class="veil" id="veil">
+      <div class="veil-stars"></div>
+      <div class="veil-stars b"></div>
+      <div class="veil-glow"></div>
+      <div class="veil-center">
+        <div class="veil-line"><div class="veil-trail"></div></div>
+        <div class="veil-plane">
+          <svg viewBox="0 0 34 14" fill="currentColor" aria-hidden="true">
+            <g transform="matrix(-1 0 0 1 34 0)">
+              <path
+                d="M2 8.6c3.2-.9 9-1.2 14-1.2 5 0 9.6.4 13 1.4l2.6-4.6h1.6l-1.5 5.6c.4.4.4.9-.1 1.2-3.3 1.6-9.5 2.1-15.6 2.1C9.4 13.1 4.4 12.4 2 11c-.9-.6-.9-1.8 0-2.4z"
+              />
+              <rect x="6" y="3.2" width="20" height="1.4" rx=".7" />
+              <path d="M14.4 4.5l1 3h1.4l-.4-3zM19 4.5l.6 3h1.3l-.6-3z" />
+            </g>
+          </svg>
+          <svg class="reflect" viewBox="0 0 34 14" fill="currentColor" aria-hidden="true">
+            <g transform="matrix(-1 0 0 1 34 0)">
+              <path
+                d="M2 8.6c3.2-.9 9-1.2 14-1.2 5 0 9.6.4 13 1.4l2.6-4.6h1.6l-1.5 5.6c.4.4.4.9-.1 1.2-3.3 1.6-9.5 2.1-15.6 2.1C9.4 13.1 4.4 12.4 2 11c-.9-.6-.9-1.8 0-2.4z"
+              />
+              <rect x="6" y="3.2" width="20" height="1.4" rx=".7" />
+              <path d="M14.4 4.5l1 3h1.4l-.4-3zM19 4.5l.6 3h1.3l-.6-3z" />
+            </g>
+          </svg>
+        </div>
+        <div class="veil-text" id="veil-text">海図をひろげています</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

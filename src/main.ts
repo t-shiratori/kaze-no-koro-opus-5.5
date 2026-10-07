@@ -8,6 +8,7 @@ import { Director } from "./flight/director";
 import { G, globalsFor } from "./render/globals";
 import { Pipeline } from "./render/pipeline";
 import { SKY_DOME_FRAG, SKY_DOME_VERT } from "./render/shaders/sky";
+import { Loader } from "./ui/loader";
 import { UI } from "./ui/ui";
 import { Birds } from "./world/birds";
 import { BoatTraffic } from "./world/boats";
@@ -37,6 +38,7 @@ function saveCanvas(canvas: HTMLCanvasElement, hours: number) {
 }
 
 function start() {
+  const loader = new Loader();
   const canvas = document.createElement("canvas");
   document.body.prepend(canvas);
   let renderer: THREE.WebGLRenderer;
@@ -258,7 +260,10 @@ function start() {
   let scaleCooldown = 3;
   let revealed = false;
   let fade = 0;
-  const veil = document.getElementById("veil");
+  // the eyes still dazzled when the veil parts: extra exposure that settles away
+  let glare = 0;
+  let firstFrame = true;
+  let maxLoading = 1;
   const params = new URLSearchParams(location.search);
   const instant = params.has("instant");
   // dev: ?scale=1 pins the render resolution (no adaptive scaling)
@@ -268,6 +273,14 @@ function start() {
     resize();
   }
   if (params.has("t")) time.hours = Number(params.get("t"));
+  loader.onOpen = () => {
+    revealed = true;
+    if (!instant) {
+      glare = 1.8;
+      G.uExposure.value *= 1 + glare;
+    }
+  };
+  if (instant) loader.dismiss();
   const tmpV = new THREE.Vector3();
   const tmpC = new THREE.Color();
   let lastRays = false;
@@ -299,7 +312,8 @@ function start() {
     G.uAmbZenith.value.copy(lighting.skyZenith).multiplyScalar(1 - deck * 0.45);
     G.uAmbHorizon.value.copy(lighting.skyHorizon).multiplyScalar(1 - deck * 0.3);
     G.uNight.value = time.night;
-    G.uExposure.value = damp(G.uExposure.value, lighting.exposure, 1.2, lightDt);
+    glare *= Math.exp(-0.55 * lightDt);
+    G.uExposure.value = damp(G.uExposure.value, lighting.exposure * (1 + glare), 1.2, lightDt);
     const windA = 0.6 + Math.sin(elapsed * 0.0041) * 0.7 + Math.sin(elapsed * 0.0107) * 0.25;
     const windS = 6.5 + Math.sin(elapsed * 0.013 + 1) * 2.5;
     G.uWind.value.set(Math.cos(windA) * windS, Math.sin(windA) * windS);
@@ -394,11 +408,13 @@ function start() {
       scene.environmentIntensity = 1;
     }
     ocean.update(renderer, camera, boats.wakes);
-    if (!revealed && ((islands.loading === 0 && elapsed > 1.2) || instant)) {
-      revealed = true;
-      veil?.classList.add("gone");
+    if (!loader.done) {
+      // shaders compile on the first frame, then the nearby islands stream in
+      maxLoading = Math.max(maxLoading, islands.loading);
+      loader.progress((firstFrame ? 0.2 : 0.45) + 0.55 * (1 - islands.loading / maxLoading));
+      loader.update(rawDt, islands.loading === 0 && elapsed > 1.2);
     }
-    if (revealed) fade = instant ? 1 : Math.min(1, fade + dt / 3);
+    if (revealed) fade = instant ? 1 : Math.min(1, fade + rawDt / 0.35);
     pipeline.fade = fade;
     pipeline.render(scene, camera);
     if (captureRequested) {
@@ -407,6 +423,7 @@ function start() {
       saveCanvas(canvas, time.hours);
     }
     ui.update();
+    firstFrame = false;
 
     // ---- adaptive resolution ----
     frameAvg = frameAvg * 0.95 + rawDt * 1000 * 0.05;
