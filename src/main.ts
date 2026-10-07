@@ -236,7 +236,14 @@ function start() {
   // ---- sizing & adaptive resolution ----
   let renderScale = 1;
   const maxDpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  // Resizing the canvas wipes its drawing buffer, so a resize between a render and the
+  // moment the frame is shown would present a black frame. Requests are therefore only
+  // applied at the top of the next frame, right before it renders.
+  let sizeDirty = false;
   const resize = () => {
+    sizeDirty = true;
+  };
+  const applySize = () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
     renderer.setPixelRatio(maxDpr * renderScale);
@@ -248,7 +255,7 @@ function start() {
     camera.updateProjectionMatrix();
   };
   window.addEventListener("resize", resize);
-  resize();
+  applySize();
 
   // warm up the world around the start point before revealing it
   islands.update(pilot.position, renderer);
@@ -286,6 +293,10 @@ function start() {
   let lastRays = false;
 
   const frame = () => {
+    if (sizeDirty) {
+      sizeDirty = false;
+      applySize();
+    }
     timer.update();
     // (dev tooling may run the page hidden at ~1 fps: allow bigger steps there)
     const rawDt = Math.min(timer.getDelta(), import.meta.env.DEV && document.hidden ? 0.6 : 0.1);
