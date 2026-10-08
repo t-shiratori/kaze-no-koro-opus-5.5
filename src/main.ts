@@ -26,7 +26,7 @@ function saveCanvas(canvas: HTMLCanvasElement, hours: number) {
     const pad = (n: number) => String(n).padStart(2, "0");
     const hh = Math.floor(hours);
     const mm = Math.floor((hours - hh) * 60);
-    const name = `mediterranean-sky_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}_${pad(hh)}${pad(mm)}.png`;
+    const name = `kaze-no-koro_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}_${pad(hh)}${pad(mm)}.png`;
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = name;
