@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 424" width="900" height="424" font-family="Hiragino Sans, Noto Sans JP, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2f6db5"/>
+    </marker>
+  </defs>
+  <rect width="900" height="424" rx="12" fill="#fbfaf6"/>
+  <text x="24" y="34" font-size="17" font-weight="bold" fill="#24303c">標準カメラ（Director）の 1 ショットを決めるパラメータ</text>
+
+  <!-- side view -->
+  <text x="40" y="70" font-size="13" font-weight="bold" fill="#55606b">横から</text>
+  <line x1="40" y1="330" x2="440" y2="330" stroke="#7aa3c7" stroke-width="2"/>
+  <text x="44" y="350" font-size="11" fill="#4a6f96">海面</text>
+  <!-- plane -->
+  <g transform="translate(250,250)">
+    <path d="M-22,0 L24,0 L30,-4 L-18,-6 Z" fill="#b24a2e"/>
+    <rect x="-8" y="-12" width="30" height="3" fill="#cfd5db"/>
+  </g>
+  <!-- camera -->
+  <g transform="translate(80,170)">
+    <rect x="-12" y="-8" width="20" height="14" rx="2" fill="#24303c"/>
+    <path d="M8,-4 L16,-8 L16,8 L8,4 Z" fill="#24303c"/>
+  </g>
+  <!-- dist -->
+  <line x1="92" y1="174" x2="246" y2="246" stroke="#2f6db5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a)" marker-start="url(#a)"/>
+  <text x="140" y="228" font-size="12" fill="#2f6db5">dist（30〜80 m）</text>
+  <!-- elevation angle -->
+  <line x1="250" y1="250" x2="90" y2="250" stroke="#999" stroke-dasharray="3 3"/>
+  <path d="M196,250 A54,54 0 0 0 201,226" fill="none" stroke="#e0952a" stroke-width="2"/>
+  <text x="168" y="270" font-size="12" fill="#b0701a">elev（仰角）</text>
+  <!-- look target -->
+  <circle cx="380" cy="244" r="5" fill="#5c9a52"/>
+  <line x1="250" y1="250" x2="380" y2="250" stroke="#5c9a52" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="380" y1="250" x2="380" y2="244" stroke="#5c9a52" stroke-width="1.5"/>
+  <text x="300" y="268" font-size="12" fill="#4e7a3e">lookAhead</text>
+  <text x="388" y="236" font-size="12" fill="#4e7a3e">注視点（+ lookUp）</text>
+  <line x1="96" y1="170" x2="372" y2="242" stroke="#24303c" stroke-width="1" opacity="0.5"/>
+
+  <!-- top view -->
+  <text x="490" y="70" font-size="13" font-weight="bold" fill="#55606b">上から</text>
+  <circle cx="690" cy="230" r="120" fill="none" stroke="#c7d3e0" stroke-dasharray="4 4"/>
+  <g transform="translate(690,230)">
+    <path d="M0,-18 L5,10 L0,6 L-5,10 Z" fill="#b24a2e"/>
+    <rect x="-22" y="-4" width="44" height="3" fill="#cfd5db"/>
+  </g>
+  <line x1="690" y1="230" x2="690" y2="90" stroke="#5c9a52" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="698" y="100" font-size="11.5" fill="#4e7a3e">機首方向（遅れて追従 followYaw）</text>
+  <!-- camera behind with yaw -->
+  <line x1="690" y1="230" x2="690" y2="350" stroke="#999" stroke-dasharray="3 3"/>
+  <line x1="690" y1="230" x2="612" y2="321" stroke="#2f6db5" stroke-width="1.6"/>
+  <rect x="600" y="318" width="18" height="12" rx="2" fill="#24303c"/>
+  <path d="M690,300 A70,70 0 0 1 645,284" fill="none" stroke="#e0952a" stroke-width="2"/>
+  <text x="600" y="296" font-size="12" fill="#b0701a" text-anchor="end">yaw</text>
+  <text x="696" y="368" font-size="11.5" fill="#666">yaw = 0 は真後ろ</text>
+  <text x="40" y="404" font-size="11.5" fill="#55606b">各値は臨界減衰スプリング（半減期 3.2 秒）で次のショットへ移る</text>
+  <text x="40" y="384" font-size="11.5" fill="#55606b">ショット例：chase / island / clouds / low / front / high / orbit / beams / cloud（雲の中）</text>
+</svg>

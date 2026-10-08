@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560" font-family="Hiragino Sans, Noto Sans JP, sans-serif">
+  <rect width="900" height="560" rx="12" fill="#fbfaf6"/>
+  <text x="24" y="34" font-size="17" font-weight="bold" fill="#24303c">島のストリーミング（IslandManager.update）</text>
+  <!-- ocean square area 500x500 => 1 cell = 3200m ~ 40px, 19 km radius ~ 240px -->
+  <g transform="translate(290,300)">
+    <rect x="-260" y="-250" width="520" height="500" fill="#dce9f3"/>
+    <!-- grid of cells -->
+    <g stroke="#b7cde0" stroke-width="1">
+      <line x1="-260" y1="-240" x2="260" y2="-240"/><line x1="-260" y1="-200" x2="260" y2="-200"/>
+      <line x1="-260" y1="-160" x2="260" y2="-160"/><line x1="-260" y1="-120" x2="260" y2="-120"/>
+      <line x1="-260" y1="-80" x2="260" y2="-80"/><line x1="-260" y1="-40" x2="260" y2="-40"/>
+      <line x1="-260" y1="0" x2="260" y2="0"/><line x1="-260" y1="40" x2="260" y2="40"/>
+      <line x1="-260" y1="80" x2="260" y2="80"/><line x1="-260" y1="120" x2="260" y2="120"/>
+      <line x1="-260" y1="160" x2="260" y2="160"/><line x1="-260" y1="200" x2="260" y2="200"/>
+      <line x1="-260" y1="240" x2="260" y2="240"/>
+      <line x1="-240" y1="-250" x2="-240" y2="250"/><line x1="-200" y1="-250" x2="-200" y2="250"/>
+      <line x1="-160" y1="-250" x2="-160" y2="250"/><line x1="-120" y1="-250" x2="-120" y2="250"/>
+      <line x1="-80" y1="-250" x2="-80" y2="250"/><line x1="-40" y1="-250" x2="-40" y2="250"/>
+      <line x1="0" y1="-250" x2="0" y2="250"/><line x1="40" y1="-250" x2="40" y2="250"/>
+      <line x1="80" y1="-250" x2="80" y2="250"/><line x1="120" y1="-250" x2="120" y2="250"/>
+      <line x1="160" y1="-250" x2="160" y2="250"/><line x1="200" y1="-250" x2="200" y2="250"/>
+      <line x1="240" y1="-250" x2="240" y2="250"/>
+    </g>
+    <!-- radii -->
+    <circle r="238" fill="none" stroke="#2f6db5" stroke-width="2" stroke-dasharray="8 5"/>
+    <circle r="81" fill="#f6e6c4" fill-opacity="0.5" stroke="#d39a3b" stroke-width="2"/>
+    <circle r="47" fill="none" stroke="#5c9a52" stroke-width="2" stroke-dasharray="4 3"/>
+    <!-- islands: far = lo poly grey, near = green -->
+    <g fill="#9aa39a">
+      <ellipse cx="-190" cy="-150" rx="9" ry="6"/><ellipse cx="-100" cy="-210" rx="6" ry="5"/>
+      <ellipse cx="150" cy="-170" rx="12" ry="7"/><ellipse cx="200" cy="60" rx="8" ry="10"/>
+      <ellipse cx="-210" cy="90" rx="10" ry="6"/><ellipse cx="-140" cy="190" rx="7" ry="5"/>
+      <ellipse cx="90" cy="200" rx="11" ry="6"/><ellipse cx="-30" cy="-140" rx="7" ry="9"/>
+      <ellipse cx="130" cy="-60" rx="9" ry="7"/><ellipse cx="-120" cy="30" rx="8" ry="6"/>
+    </g>
+    <g fill="#7fae6b" stroke="#4e7a3e">
+      <ellipse cx="55" cy="-30" rx="14" ry="9"/><ellipse cx="-30" cy="45" rx="10" ry="12"/>
+      <ellipse cx="-60" cy="-20" rx="8" ry="6"/>
+    </g>
+    <!-- plane -->
+    <path d="M0,-10 L6,8 L0,4 L-6,8 Z" fill="#b24a2e"/>
+    <!-- labels -->
+    <text x="0" y="-244" font-size="11" fill="#2f6db5" text-anchor="middle">VIEW_RADIUS 19 km</text>
+    <text x="0" y="-86" font-size="11" fill="#b0701a" text-anchor="middle">PROP_IN 6.5 km</text>
+    <text x="0" y="62" font-size="10.5" fill="#4e7a3e" text-anchor="middle">LOD 3.8 km</text>
+    <text x="-256" y="-232" font-size="10.5" fill="#6a879f">1 マス = CELL_SIZE 3.2 km</text>
+  </g>
+  <!-- right side explanation -->
+  <g font-size="12.5" fill="#33404c">
+    <text x="580" y="80" font-size="14" font-weight="bold" fill="#24303c">流れ</text>
+    <text x="580" y="106">1. 機体周辺のセルを列挙</text>
+    <text x="580" y="124" fill="#55606b" font-size="11.5">islandForCell(cx, cz) はハッシュで決定論的。</text>
+    <text x="580" y="140" fill="#55606b" font-size="11.5">同じセルには毎回同じ島が出る（保存不要）</text>
+    <text x="580" y="166">2. 近い順にキューへ → Web Worker へ</text>
+    <text x="580" y="184" fill="#55606b" font-size="11.5">CPU コア数−1（2〜4 個）の Worker が並列に</text>
+    <text x="580" y="200" fill="#55606b" font-size="11.5">高さ場・頂点色・木/家の配置を計算</text>
+    <text x="580" y="216" fill="#55606b" font-size="11.5">TypedArray を Transferable でゼロコピー返却</text>
+    <text x="580" y="242">3. THREE.LOD（hi / lo）を作って配置</text>
+    <text x="580" y="260" fill="#55606b" font-size="11.5">3.8 km より遠いと低ポリゴン版に切替</text>
+    <text x="580" y="286">4. 6.5 km 以内で小物を生成</text>
+    <text x="580" y="304" fill="#55606b" font-size="11.5">木・家・屋根は InstancedMesh、灯台・塔・桟橋</text>
+    <text x="580" y="320" fill="#55606b" font-size="11.5">8 km より離れたら破棄（ヒステリシス）</text>
+    <text x="580" y="346">5. 高さマップを再描画</text>
+    <text x="580" y="364" fill="#55606b" font-size="11.5">真上からの正射影で 14 km 四方を 1536² に。</text>
+    <text x="580" y="380" fill="#55606b" font-size="11.5">海シェーダの水深（浅瀬・波打ち際）に使う</text>
+    <text x="580" y="406">6. 19 km の外に出た島は dispose</text>
+    <text x="580" y="440" font-size="14" font-weight="bold" fill="#24303c">CPU からの高さ問い合わせ</text>
+    <text x="580" y="464" fill="#55606b" font-size="11.5">heightAt(x, z) はメッシュではなく</text>
+    <text x="580" y="480" fill="#55606b" font-size="11.5">同じ解析関数 islandSample() を周囲 3×3 セル分</text>
+    <text x="580" y="496" fill="#55606b" font-size="11.5">評価する → 自動操縦・カメラ・船・鳥が地形を避ける</text>
+  </g>
+</svg>

@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560" font-family="Hiragino Sans, Noto Sans JP, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b6b7c"/>
+    </marker>
+    <style>
+      .cam { fill: #24303c; }
+      .lab { font-size: 12px; fill: #24303c; font-weight: bold; }
+      .sub { font-size: 10.5px; fill: #5d6874; }
+      .ray { stroke: #8fa3b8; stroke-width: 1; stroke-dasharray: 3 3; }
+    </style>
+  </defs>
+  <rect width="900" height="560" rx="12" fill="#fbfaf6"/>
+  <text x="24" y="34" font-size="17" font-weight="bold" fill="#24303c">シネマモード（Cinema）のカメラ配置 — 上から見た図</text>
+  <rect x="20" y="50" width="580" height="490" rx="10" fill="#dce9f3"/>
+  <!-- flight path -->
+  <line x1="310" y1="530" x2="310" y2="60" stroke="#b24a2e" stroke-width="1.5" stroke-dasharray="8 6" marker-end="url(#a)"/>
+  <text x="318" y="72" class="sub">進行方向</text>
+  <!-- plane -->
+  <g transform="translate(310,330)">
+    <path d="M0,-16 L5,10 L0,6 L-5,10 Z" fill="#b24a2e"/>
+    <rect x="-20" y="-4" width="40" height="3" fill="#7d8790"/>
+  </g>
+  <!-- island -->
+  <ellipse cx="510" cy="200" rx="70" ry="45" fill="#a8c08c" stroke="#6f8f55"/>
+  <text x="510" y="204" class="sub" text-anchor="middle">島</text>
+
+  <!-- flyby: tripod ahead and to the side -->
+  <rect x="340" y="120" width="14" height="10" class="cam"/>
+  <line x1="347" y1="130" x2="312" y2="320" class="ray"/>
+  <text x="358" y="122" class="lab">flyby</text>
+  <text x="358" y="136" class="sub">160〜340 m 前方に三脚。通過を首振りで追う</text>
+
+  <!-- island: far side so island is background -->
+  <rect x="190" y="235" width="14" height="10" class="cam"/>
+  <line x1="204" y1="240" x2="510" y2="200" class="ray"/>
+  <text x="80" y="228" class="lab">island</text>
+  <text x="40" y="262" class="sub">島の反対側に立ち、望遠で島を背景に</text>
+
+  <!-- track: alongside -->
+  <rect x="250" y="325" width="14" height="10" class="cam"/>
+  <text x="140" y="322" class="lab">track</text>
+  <text x="120" y="350" class="sub">真横を並走</text>
+
+  <!-- front -->
+  <rect x="340" y="268" width="14" height="10" class="cam"/>
+  <text x="360" y="280" class="lab">front</text>
+  <text x="360" y="294" class="sub">斜め前から振り返る</text>
+
+  <!-- orbit circle -->
+  <circle cx="310" cy="330" r="34" fill="none" stroke="#e0952a" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="352" y="350" class="lab" fill="#b0701a">orbit</text>
+  <text x="352" y="364" class="sub">半径 26 m で回り込む</text>
+
+  <!-- tele: far behind -->
+  <rect x="345" y="480" width="14" height="10" class="cam"/>
+  <line x1="352" y1="480" x2="312" y2="340" class="ray"/>
+  <text x="366" y="490" class="lab">tele</text>
+  <text x="366" y="504" class="sub">200〜340 m 後方から望遠（FOV 11〜16°）</text>
+
+  <!-- aerial -->
+  <rect x="268" y="440" width="14" height="10" class="cam"/>
+  <text x="170" y="448" class="lab">aerial</text>
+  <text x="120" y="462" class="sub">高く後方、水平線も入れる</text>
+
+  <!-- sunward -->
+  <circle cx="80" cy="90" r="14" fill="#f6c453"/>
+  <text x="100" y="94" class="sub">太陽の方角</text>
+  <rect x="345" y="355" width="14" height="10" class="cam"/>
+  <line x1="352" y1="358" x2="94" y2="98" class="ray"/>
+  <text x="140" y="140" class="lab">sunward</text>
+  <text x="140" y="154" class="sub">機体越しに光の方を見る（光芒の日に多い）</text>
+
+  <!-- lowSea -->
+  <rect x="285" y="175" width="14" height="10" class="cam"/>
+  <text x="200" y="176" class="lab">lowSea</text>
+  <text x="196" y="190" class="sub">海面 2 m</text>
+
+  <!-- right column: on-board shots and rules -->
+  <g font-size="12.5" fill="#33404c">
+    <text x="620" y="74" font-size="14" font-weight="bold" fill="#24303c">機体に固定するカット</text>
+    <text x="620" y="96">cockpit … 操縦席の肩越し（FOV 70）</text>
+    <text x="620" y="116">wing … 右翼端から胴体を振り返る</text>
+    <text x="620" y="136">tail … 尾翼の上から前方へ</text>
+    <text x="620" y="156">topdown … 真上（機首が画面上）</text>
+    <text x="620" y="196" font-size="14" font-weight="bold" fill="#24303c">選び方</text>
+    <text x="620" y="218">・状況で候補と重みが変わる</text>
+    <text x="632" y="236" font-size="11.5" fill="#55606b">低空 → lowSea、近くに島 → island、</text>
+    <text x="632" y="252" font-size="11.5" fill="#55606b">光芒 → sunward（重み 4）、</text>
+    <text x="632" y="268" font-size="11.5" fill="#55606b">雲の中 → 機上カットのみ</text>
+    <text x="620" y="292">・直前 2 カットと同じ種類は避ける</text>
+    <text x="620" y="316">・validate()：カメラが地面より下、</text>
+    <text x="632" y="334" font-size="11.5" fill="#55606b">または機体との間に地形があれば選び直す</text>
+    <text x="620" y="358">・各カット 6〜13 秒、FOV をゆっくりズーム</text>
+    <text x="620" y="382">・手持ち風の揺れ（shake）をカットごとに</text>
+    <text x="620" y="406">・カット時は雲のヒストリを破棄</text>
+    <text x="632" y="424" font-size="11.5" fill="#55606b">（前のカットの雲が残像として滲まない）</text>
+    <text x="620" y="452">・画面は 2.39:1 のシネスコ黒帯</text>
+  </g>
+</svg>

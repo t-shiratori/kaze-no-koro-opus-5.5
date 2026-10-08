@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" width="900" height="640" font-family="Hiragino Sans, Noto Sans JP, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b6b7c"/>
+    </marker>
+    <style>
+      .pass { fill: #ffffff; stroke: #5b6b7c; stroke-width: 1.4; }
+      .env { fill: #fff5e3; stroke: #d39a3b; stroke-width: 1.4; }
+      .post { fill: #eef3fb; stroke: #4f7fbf; stroke-width: 1.4; }
+      .rt { fill: #f1f1ee; stroke: #9a9a92; stroke-width: 1; stroke-dasharray: 4 3; }
+      .t { font-size: 14px; font-weight: bold; fill: #24303c; }
+      .s { font-size: 11.5px; fill: #55606b; }
+      .r { font-size: 11px; fill: #6b6b63; }
+      .l { stroke: #5b6b7c; stroke-width: 1.4; fill: none; marker-end: url(#a); }
+      .h { font-size: 13px; font-weight: bold; fill: #8a6a2a; }
+    </style>
+  </defs>
+  <rect width="900" height="640" rx="12" fill="#fbfaf6"/>
+  <text x="24" y="34" font-size="17" font-weight="bold" fill="#24303c">1 フレームの描画（Pipeline.render ほか）</text>
+
+  <!-- column labels -->
+  <text x="24" y="70" class="h">① 環境の事前パス（カメラ画像とは独立）</text>
+  <text x="24" y="246" class="h">② シーンとボリューム</text>
+  <text x="24" y="478" class="h">③ ポストプロセス</text>
+
+  <!-- env passes -->
+  <rect x="24" y="84" width="190" height="64" rx="8" class="env"/>
+  <text x="38" y="108" class="t">Sky-view LUT</text>
+  <text x="38" y="128" class="s">大気散乱を 256×128 に焼く</text>
+  <text x="38" y="143" class="s">SKY_LUT_FRAG</text>
+
+  <rect x="240" y="84" width="200" height="64" rx="8" class="env"/>
+  <text x="254" y="108" class="t">雲の影マップ</text>
+  <text x="254" y="128" class="s">太陽方向の透過率 1024²</text>
+  <text x="254" y="143" class="s">24 km 四方・カメラに追従</text>
+
+  <rect x="466" y="84" width="200" height="64" rx="8" class="env"/>
+  <text x="480" y="108" class="t">FFT 海洋</text>
+  <text x="480" y="128" class="s">スペクトル→逆FFT 16 段</text>
+  <text x="480" y="143" class="s">3 カスケード分の斜面マップ</text>
+
+  <rect x="692" y="84" width="184" height="64" rx="8" class="env"/>
+  <text x="706" y="108" class="t">PMREM 環境光</text>
+  <text x="706" y="128" class="s">空ドームを 2 秒ごとに</text>
+  <text x="706" y="143" class="s">キューブ→プレフィルタ</text>
+
+  <rect x="24" y="168" width="852" height="46" rx="8" fill="#fffaf0" stroke="#e7cf9c"/>
+  <text x="40" y="196" class="s">これらは G（共有ユニフォーム）経由で、空・雲・海・島・機体・鳥…すべてのシェーダから参照される</text>
+
+  <!-- scene -->
+  <rect x="24" y="260" width="250" height="92" rx="8" class="pass"/>
+  <text x="38" y="284" class="t">1. シーン描画</text>
+  <text x="38" y="304" class="s">空ドーム・海・島・船・鳥・機体・灯り</text>
+  <text x="38" y="320" class="s">HDR（HalfFloat）・MSAA ×4</text>
+  <text x="38" y="336" class="s">対数深度バッファ / 太陽の影 PCF</text>
+  <rect x="44" y="366" width="210" height="40" rx="6" class="rt"/>
+  <text x="56" y="383" class="r">sceneRT：色 + 深度</text>
+  <text x="56" y="398" class="r">フル解像度</text>
+
+  <rect x="320" y="260" width="250" height="92" rx="8" class="pass"/>
+  <text x="334" y="284" class="t">2. 雲・光芒・雨（半解像度）</text>
+  <text x="334" y="304" class="s">深度を見てレイマーチ（MRT 2 枚）</text>
+  <text x="334" y="320" class="s">out0: 散乱光 rgb + 透過率 a</text>
+  <text x="334" y="336" class="s">out1: 日向率・距離・光芒</text>
+  <rect x="340" y="366" width="210" height="40" rx="6" class="rt"/>
+  <text x="352" y="383" class="r">cloudRT（半解像度 ×2 枚）</text>
+  <text x="352" y="398" class="r">IGN ジッタで開始位置をずらす</text>
+
+  <rect x="616" y="260" width="260" height="92" rx="8" class="pass"/>
+  <text x="630" y="284" class="t">2b. 時間方向の蓄積</text>
+  <text x="630" y="304" class="s">前フレームへ再投影して 88% ブレンド</text>
+  <text x="630" y="320" class="s">近傍 3×3 の分散でヒストリをクリップ</text>
+  <text x="630" y="336" class="s">カット時は onCut → resetHistory()</text>
+  <rect x="636" y="366" width="220" height="40" rx="6" class="rt"/>
+  <text x="648" y="383" class="r">history[0/1]（ピンポン）</text>
+  <text x="648" y="398" class="r">prevViewProj を保持</text>
+
+  <path class="l" d="M274,306 L318,306"/>
+  <path class="l" d="M570,306 L614,306"/>
+  <path class="l" d="M150,406 C150,440 440,430 440,354" stroke-dasharray="3 3"/>
+  <text x="200" y="452" class="r">深度を渡す</text>
+
+  <!-- post -->
+  <rect x="24" y="492" width="250" height="92" rx="8" class="post"/>
+  <text x="38" y="516" class="t">3. 合成（Composite）</text>
+  <text x="38" y="536" class="s">深度考慮のアップサンプリング</text>
+  <text x="38" y="552" class="s">高さ指数フォグ（空気遠近）</text>
+  <text x="38" y="568" class="s">雲を重ね、光芒を加算</text>
+
+  <rect x="320" y="492" width="250" height="92" rx="8" class="post"/>
+  <text x="334" y="516" class="t">4. ブルーム（6 段）</text>
+  <text x="334" y="536" class="s">しきい値 1.1 のソフトニー抽出</text>
+  <text x="334" y="552" class="s">13 タップで縮小 → テントで拡大</text>
+  <text x="334" y="568" class="s">1/2, 1/4 … 1/64 解像度</text>
+
+  <rect x="616" y="492" width="260" height="92" rx="8" class="post"/>
+  <text x="630" y="516" class="t">5. 仕上げ（画面へ）</text>
+  <text x="630" y="536" class="s">露出 → ACES フィット → グレーディング</text>
+  <text x="630" y="552" class="s">彩度・ビネット・sRGB・フェード</text>
+  <text x="630" y="568" class="s">1.5/255 のディザでバンディング防止</text>
+
+  <path class="l" d="M746,406 C746,450 150,440 150,490"/>
+  <path class="l" d="M274,538 L318,538"/>
+  <path class="l" d="M570,538 L614,538"/>
+  <text x="24" y="618" class="r">画面サイズは「適応解像度」で 0.55〜1.0 倍に変化（平均フレーム時間 &gt; 21 ms で下げ、&lt; 13 ms で上げる）。リサイズは次フレームの描画直前にまとめて適用。</text>
+</svg>
