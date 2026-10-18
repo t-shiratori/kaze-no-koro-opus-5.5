@@ -3,6 +3,17 @@
 架空の地中海の群島の上を、古い飛行艇がただ静かに飛び続ける。ブラウザで動くリアルタイム 3D の「動く風景画」です。
 操作は要りません。旅の行き先も、雲も、光も、自動で移ろいます。
 
+<img width="700" height="" alt="スクリーンショット 2026-10-18 12 46 18" src="https://github.com/user-attachments/assets/150c401a-3f58-411d-b29e-b62030a41886" />
+
+<img width="700" height="" alt="kaze-no-koro_20261018-125528_1235" src="https://github.com/user-attachments/assets/bf995764-96e0-4cd6-a5c2-56b2c0c60b27" />
+
+<img width="700" height="" alt="kaze-no-koro_20261018-125327_0705" src="https://github.com/user-attachments/assets/e697bd28-d71b-4d0c-93ec-8888e9076b4c" />
+
+<img width="700" height="" alt="kaze-no-koro_20261018-124656_1249" src="https://github.com/user-attachments/assets/bc380111-80fc-4f4b-9a47-4aef8f127bb8" />
+
+<img width="700" height="" alt="kaze-no-koro_20261018-124945_0742" src="https://github.com/user-attachments/assets/2e4533c4-f227-4264-845f-e119765ddb2f" />
+
+
 ## 起動
 
 ```bash
